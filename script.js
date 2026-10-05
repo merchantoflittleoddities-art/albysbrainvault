@@ -41,6 +41,36 @@ function saveNotes() {
 
 
 // ================================
+// DATE FORMATTING
+// ================================
+
+function formatDate(date) {
+    const d = new Date(date);
+    const day = d.getDate();
+    const month = d.toLocaleString('default', { month: 'short' });
+    const year = d.getFullYear();
+    const hours = d.getHours().toString().padStart(2, '0');
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    return `${day} ${month} ${year}, ${hours}:${minutes}`;
+}
+
+
+// ================================
+// WORD COUNT
+// ================================
+
+function updateWordCount(text) {
+    if (!text || text.trim() === "") {
+        wordCountEl.textContent = "0 words";
+        return;
+    }
+    const words = text.trim().split(/\s+/).filter(word => word.length > 0);
+    const count = words.length;
+    wordCountEl.textContent = count === 1 ? "1 word" : `${count} words`;
+}
+
+
+// ================================
 // ELEMENTS
 // ================================
 
@@ -86,6 +116,10 @@ const deleteButton =
     document.querySelector(
         '.editor-actions button[title="Delete note"]'
     );
+
+// Editor footer elements
+const lastSavedEl = document.getElementById("lastSaved");
+const wordCountEl = document.getElementById("wordCount");
 
 
 // Sidebar buttons
@@ -153,7 +187,9 @@ function createNewNote() {
 
         pinned: false,
 
-        trashed: false
+        trashed: false,
+
+        updatedAt: new Date().toISOString()
 
     };
 
@@ -515,6 +551,16 @@ function openNote(noteId) {
 
     }
 
+    // Update last saved timestamp
+    if (note.updatedAt) {
+        lastSavedEl.textContent = `Last saved: ${formatDate(note.updatedAt)}`;
+    } else {
+        lastSavedEl.textContent = "Last saved: Never";
+    }
+
+    // Update word count
+    updateWordCount(note.content);
+
 
     console.log(
         "Opened note:",
@@ -536,7 +582,12 @@ noteTitle.addEventListener(
 
 noteContent.addEventListener(
     "input",
-    saveCurrentNote
+    () => {
+        saveCurrentNote();
+        if (currentNoteId !== null) {
+            updateWordCount(noteContent.value);
+        }
+    }
 );
 
 
@@ -567,6 +618,8 @@ function saveCurrentNote() {
 
     note.content =
         noteContent.value;
+
+    note.updatedAt = new Date().toISOString();
 
 
     saveNotes();
@@ -616,6 +669,8 @@ function changeCategory() {
 
     note.category =
         categorySelect.value;
+
+    note.updatedAt = new Date().toISOString();
 
 
     saveNotes();
@@ -752,6 +807,10 @@ function handleDeleteButton() {
         noteContent.value =
             "";
 
+        // Reset editor footer
+        lastSavedEl.textContent = "Last saved: Never";
+        wordCountEl.textContent = "0 words";
+
 
         displayNotes();
 
@@ -787,6 +846,10 @@ function handleDeleteButton() {
 
     noteContent.value =
         "";
+
+    // Reset editor footer
+    lastSavedEl.textContent = "Last saved: Never";
+    wordCountEl.textContent = "0 words";
 
 
     displayNotes();
