@@ -420,11 +420,7 @@ function displayNotes() {
 
     if (visibleNotes.length === 0) {
         const emptyMessage = document.createElement("div");
-        emptyMessage.classList.add("note-card");
-        emptyMessage.style.cursor = "default";
-        emptyMessage.style.textAlign = "center";
-        emptyMessage.style.padding = "30px 15px";
-        emptyMessage.style.color = "#777784";
+        emptyMessage.classList.add("note-card", "empty-state");
         emptyMessage.textContent = currentSearchQuery !== ""
             ? `No notes found for "${searchInput.value}"`
             : "No notes yet";
