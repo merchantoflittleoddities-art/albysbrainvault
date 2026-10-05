@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Alby's Brain Vault</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="app">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+
+            <div class="logo">
+                🖤
+                <span>ALBY'S<br>BRAIN VAULT</span>
+            </div>
+
+            <button class="new-note-btn">
+                ＋ New Note
+            </button>
+
+            <div class="sidebar-section">
+
+                <h3>📁 Categories</h3>
+
+                <button class="category-btn">🏥 Hayley</button>
+                <button class="category-btn">🏠 Housing</button>
+                <button class="category-btn">💷 Money</button>
+                <button class="category-btn">📋 Important</button>
+                <button class="category-btn">🎀 Personal</button>
+
+            </div>
+
+            <div class="sidebar-section">
+
+                <h3>🗂️ Vault</h3>
+
+                <button class="category-btn">📌 Pinned</button>
+                <button class="category-btn">📝 All Notes</button>
+                <button class="category-btn">🗑️ Trash</button>
+
+            </div>
+
+            <div class="sidebar-bottom">
+                <button class="category-btn">⚙️ Settings</button>
+            </div>
+
+        </aside>
+
+
+        <!-- MAIN AREA -->
+        <main class="main">
+
+            <!-- TOP BAR -->
+            <header class="topbar">
+
+                <div class="search-container">
+                    🔍
+
+                    <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Search your brain..."
+                    >
+                </div>
+
+                <button class="ai-button">
+                    🧠 Ask Brain Vault
+                </button>
+
+            </header>
+
+
+            <!-- CONTENT -->
+            <section class="content">
+
+
+                <!-- NOTE LIST -->
+                <div class="notes-panel">
+
+                    <div class="panel-header">
+
+                        <div>
+                            <h1>Important</h1>
+                            <p>Your important notes</p>
+                        </div>
+
+                        <button class="sort-btn">
+                            ↕ Sort
+                        </button>
+
+                    </div>
+
+
+                    <div id="notesList" class="notes-list">
+                        <!-- JavaScript will put notes here -->
+                    </div>
+
+                </div>
+
+
+                <!-- NOTE EDITOR -->
+                <div class="editor-panel">
+
+                    <div class="editor-toolbar">
+
+                       <select id="categorySelect" class="category-select">
+    <option value="Hayley">🏥 Hayley</option>
+    <option value="Housing">🏠 Housing</option>
+    <option value="Money">💷 Money</option>
+    <option value="Important">📋 Important</option>
+    <option value="Personal">🎀 Personal</option>
+</select>
+
+                        <div class="editor-actions">
+
+                            <button title="Pin note">
+                                📌
+                            </button>
+
+                            <button title="Delete note">
+                                🗑️
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="editor">
+
+                        <input
+                            type="text"
+                            id="noteTitle"
+                            class="note-title"
+                            placeholder="Note title..."
+                        >
+
+                        <textarea
+                            id="noteContent"
+                            class="note-content"
+                            placeholder="Start writing..."
+                        ></textarea>
+
+                    </div>
+
+
+                    <div class="editor-footer">
+
+                        <span>
+                            Last saved: Just now
+                        </span>
+
+                        <span>
+                            0 words
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+            </section>
+
+        </main>
+
+    </div>
+
+
+    <script src="script.js"></script>
+
+</body>
+</html>

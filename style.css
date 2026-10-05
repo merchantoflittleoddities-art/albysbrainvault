@@ -1,0 +1,544 @@
+/* =========================
+   BRAIN VAULT
+   Base Styles
+========================= */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #0d0d12;
+    color: #eeeeee;
+    height: 100vh;
+    overflow: hidden;
+}
+
+
+/* =========================
+   APP LAYOUT
+========================= */
+
+.app {
+    display: flex;
+    height: 100vh;
+}
+
+
+/* =========================
+   SIDEBAR
+========================= */
+
+.sidebar {
+    width: 250px;
+    background: #15151d;
+    border-right: 1px solid #292934;
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 24px 16px;
+}
+
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    font-weight: bold;
+    letter-spacing: 1px;
+
+    margin-bottom: 30px;
+}
+
+.logo:first-letter {
+    font-size: 25px;
+}
+
+
+.new-note-btn {
+    width: 100%;
+
+    padding: 12px;
+
+    border: none;
+    border-radius: 8px;
+
+    background: #292938;
+    color: white;
+
+    font-size: 15px;
+    font-weight: bold;
+
+    cursor: pointer;
+
+    margin-bottom: 30px;
+}
+
+.new-note-btn:hover {
+    background: #38384b;
+}
+
+
+.sidebar-section {
+    margin-bottom: 28px;
+}
+
+.sidebar-section h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+
+    color: #777784;
+
+    margin-bottom: 10px;
+
+    letter-spacing: 1px;
+}
+
+
+.category-btn {
+    width: 100%;
+
+    padding: 9px 10px;
+
+    border: none;
+    border-radius: 6px;
+
+    background: transparent;
+
+    color: #c9c9d1;
+
+    text-align: left;
+
+    cursor: pointer;
+
+    margin-bottom: 3px;
+}
+
+.category-btn:hover {
+    background: #23232e;
+    color: white;
+}
+
+
+.sidebar-bottom {
+    margin-top: auto;
+}
+
+
+/* =========================
+   MAIN
+========================= */
+
+.main {
+    flex: 1;
+
+    display: flex;
+    flex-direction: column;
+
+    min-width: 0;
+}
+
+
+/* =========================
+   TOP BAR
+========================= */
+
+.topbar {
+    height: 70px;
+
+    border-bottom: 1px solid #292934;
+
+    display: flex;
+    align-items: center;
+
+    padding: 0 24px;
+
+    gap: 20px;
+}
+
+
+.search-container {
+    flex: 1;
+
+    max-width: 600px;
+
+    background: #181820;
+
+    border: 1px solid #292934;
+
+    border-radius: 8px;
+
+    padding: 10px 14px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+}
+
+
+.search-container input {
+    flex: 1;
+
+    background: transparent;
+
+    border: none;
+    outline: none;
+
+    color: white;
+
+    font-size: 14px;
+}
+
+
+.ai-button {
+    margin-left: auto;
+
+    padding: 10px 16px;
+
+    border-radius: 8px;
+
+    border: 1px solid #343447;
+
+    background: #20202c;
+
+    color: white;
+
+    cursor: pointer;
+
+    font-weight: bold;
+}
+
+.ai-button:hover {
+    background: #2b2b3b;
+}
+
+
+/* =========================
+   CONTENT
+========================= */
+
+.content {
+    flex: 1;
+
+    display: flex;
+
+    min-height: 0;
+}
+
+
+/* =========================
+   NOTES PANEL
+========================= */
+
+.notes-panel {
+    width: 360px;
+
+    border-right: 1px solid #292934;
+
+    padding: 24px;
+
+    overflow-y: auto;
+}
+
+
+.panel-header {
+    display: flex;
+
+    justify-content: space-between;
+    align-items: flex-start;
+
+    margin-bottom: 20px;
+}
+
+
+.panel-header h1 {
+    font-size: 22px;
+}
+
+.panel-header p {
+    color: #777784;
+
+    font-size: 13px;
+
+    margin-top: 4px;
+}
+
+
+.sort-btn {
+    background: transparent;
+
+    border: 1px solid #30303d;
+
+    color: #aaa;
+
+    padding: 6px 10px;
+
+    border-radius: 6px;
+
+    cursor: pointer;
+}
+
+.sort-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 4px;
+    background: #181820;
+    border: 1px solid #30303d;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    z-index: 100;
+    min-width: 160px;
+    overflow: hidden;
+}
+
+.sort-dropdown.hidden {
+    display: none;
+}
+
+.sort-option {
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    background: transparent;
+    color: #ddd;
+    text-align: left;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    transition: background 0.15s;
+}
+
+.sort-option:hover {
+    background: #23232e;
+}
+
+.sort-option.active {
+    background: #23232e;
+    color: #fff;
+}
+
+.panel-header {
+    position: relative;
+}
+
+
+/* =========================
+   NOTE CARDS
+========================= */
+
+.note-card {
+    background: #16161e;
+
+    border: 1px solid #292934;
+
+    border-radius: 9px;
+
+    padding: 15px;
+
+    margin-bottom: 10px;
+
+    cursor: pointer;
+
+    transition: 0.15s;
+}
+
+.note-card:hover {
+    background: #1c1c26;
+}
+
+.note-card.active {
+    border-color: #57576d;
+    background: #1d1d27;
+}
+
+
+.note-card-top {
+    display: flex;
+
+    justify-content: space-between;
+
+    font-size: 11px;
+
+    color: #8f8fa0;
+
+    margin-bottom: 8px;
+}
+
+
+.note-card h2 {
+    font-size: 15px;
+
+    margin-bottom: 6px;
+}
+
+.note-card p {
+    color: #9999a5;
+
+    font-size: 13px;
+
+    line-height: 1.4;
+
+    margin-bottom: 10px;
+}
+
+.note-card small {
+    color: #656572;
+
+    font-size: 11px;
+}
+
+
+/* =========================
+   EDITOR
+========================= */
+
+.editor-panel {
+    flex: 1;
+
+    display: flex;
+
+    flex-direction: column;
+
+    min-width: 0;
+}
+
+
+.editor-toolbar {
+    height: 55px;
+
+    border-bottom: 1px solid #292934;
+
+    display: flex;
+
+    justify-content: space-between;
+    align-items: center;
+
+    padding: 0 24px;
+
+    color: #9999a5;
+
+    font-size: 13px;
+}
+
+
+.editor-actions {
+    display: flex;
+
+    gap: 8px;
+}
+
+
+.editor-actions button {
+    background: transparent;
+
+    border: none;
+
+    color: #aaa;
+
+    cursor: pointer;
+
+    padding: 6px;
+}
+
+
+.editor-actions button:hover {
+    color: white;
+}
+
+
+/* =========================
+   EDITOR CONTENT
+========================= */
+
+.editor {
+    flex: 1;
+
+    display: flex;
+
+    flex-direction: column;
+
+    padding: 40px 60px;
+
+    overflow-y: auto;
+}
+
+
+.note-title {
+    width: 100%;
+
+    background: transparent;
+
+    border: none;
+
+    outline: none;
+
+    color: white;
+
+    font-size: 32px;
+
+    font-weight: bold;
+
+    margin-bottom: 20px;
+}
+
+
+.note-title::placeholder {
+    color: #444450;
+}
+
+
+.note-content {
+    flex: 1;
+
+    width: 100%;
+
+    resize: none;
+
+    background: transparent;
+
+    border: none;
+
+    outline: none;
+
+    color: #d5d5dc;
+
+    font-size: 16px;
+
+    line-height: 1.7;
+
+    font-family: inherit;
+}
+
+
+.note-content::placeholder {
+    color: #444450;
+}
+
+
+/* =========================
+   EDITOR FOOTER
+========================= */
+
+.editor-footer {
+    height: 40px;
+
+    border-top: 1px solid #292934;
+
+    padding: 0 24px;
+
+    display: flex;
+
+    justify-content: space-between;
+    align-items: center;
+
+    color: #5f5f6b;
+
+    font-size: 11px;
+}
