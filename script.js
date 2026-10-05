@@ -12,7 +12,8 @@ let notes = JSON.parse(localStorage.getItem("brainVaultNotes")) || [
         content: "This is where your notes will live.",
         category: "Important",
         pinned: true,
-        trashed: false
+        trashed: false,
+        tags: []
     },
 
     {
@@ -21,7 +22,8 @@ let notes = JSON.parse(localStorage.getItem("brainVaultNotes")) || [
         content: "Medical notes, appointments and important information...",
         category: "Hayley",
         pinned: false,
-        trashed: false
+        trashed: false,
+        tags: []
     }
 ];
 
@@ -71,6 +73,77 @@ function updateWordCount(text) {
 
 
 // ================================
+// TAGS HANDLING
+// ================================
+
+function normalizeTag(tag) {
+    return tag.replace(/^#/, "").toLowerCase().trim();
+}
+
+function renderTags(note) {
+    tagsDisplay.innerHTML = "";
+    if (!note.tags || note.tags.length === 0) return;
+
+    note.tags.forEach(tag => {
+        const tagChip = document.createElement("span");
+        tagChip.className = "tag-chip";
+        tagChip.innerHTML = `
+            #${tag}
+            <button class="tag-remove" data-tag="${tag}" title="Remove tag">×</button>
+        `;
+        tagsDisplay.appendChild(tagChip);
+    });
+
+    // Add click handlers for remove buttons
+    tagsDisplay.querySelectorAll(".tag-remove").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            removeTag(note, btn.dataset.tag);
+        });
+    });
+}
+
+function addTag(note, tagText) {
+    const normalized = normalizeTag(tagText);
+    if (!normalized) return false;
+
+    // Check for duplicates (case-insensitive)
+    const existingLower = note.tags.map(t => t.toLowerCase());
+    if (existingLower.includes(normalized)) return false;
+
+    note.tags.push(normalized);
+    note.updatedAt = new Date().toISOString();
+    saveNotes();
+    renderTags(note);
+    displayNotes();
+    return true;
+}
+
+function removeTag(note, tagToRemove) {
+    note.tags = note.tags.filter(t => t.toLowerCase() !== tagToRemove.toLowerCase());
+    note.updatedAt = new Date().toISOString();
+    saveNotes();
+    renderTags(note);
+    displayNotes();
+}
+
+// Tag input handler
+// Moved after ELEMENTS declarations to avoid ReferenceError
+// tagInput.addEventListener("keydown", (e) => {
+//     if (e.key === "Enter" && currentNoteId !== null) {
+//         e.preventDefault();
+//         const tagText = tagInput.value.trim();
+//         if (tagText) {
+//             const note = notes.find(n => n.id === currentNoteId);
+//             if (note && addTag(note, tagText)) {
+//                 tagInput.value = "";
+//             }
+//         }
+//     }
+// });
+
+
+// ================================
 // ELEMENTS
 // ================================
 
@@ -94,6 +167,24 @@ const searchInput =
 
 const categorySelect =
     document.getElementById("categorySelect");
+
+// Tags elements
+const tagInput = document.getElementById("tagInput");
+const tagsDisplay = document.getElementById("tagsDisplay");
+
+// Tag input handler
+tagInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && currentNoteId !== null) {
+        e.preventDefault();
+        const tagText = tagInput.value.trim();
+        if (tagText) {
+            const note = notes.find(n => n.id === currentNoteId);
+            if (note && addTag(note, tagText)) {
+                tagInput.value = "";
+            }
+        }
+    }
+});
 
 
 // Page heading
@@ -189,6 +280,8 @@ function createNewNote() {
 
         trashed: false,
 
+        tags: [],
+
         updatedAt: new Date().toISOString()
 
     };
@@ -244,7 +337,8 @@ function displayNotes() {
             const titleMatch = note.title.toLowerCase().includes(query);
             const contentMatch = note.content.toLowerCase().includes(query);
             const categoryMatch = note.category.toLowerCase().includes(query);
-            return titleMatch || contentMatch || categoryMatch;
+            const tagsMatch = note.tags && note.tags.some(tag => tag.toLowerCase().includes(query));
+            return titleMatch || contentMatch || categoryMatch || tagsMatch;
         });
 
     }
@@ -373,6 +467,11 @@ function displayNotes() {
                     ${note.content || "No content yet..."}
                 </p>
 
+                ${note.tags && note.tags.length > 0 ? `
+                <div class="note-card-tags">
+                    ${note.tags.map(tag => `<span class="note-card-tag">#${tag}</span>`).join("")}
+                </div>
+                ` : ""}
 
                 <small>
                     ${note.trashed ? "In Trash" : "Just now"}
@@ -529,10 +628,21 @@ function openNote(noteId) {
         note.content;
 
 
+    // Ensure tags array exists for backward compatibility
+    if (!note.tags) {
+        note.tags = [];
+    }
+
     // Set category dropdown
 
     categorySelect.value =
         note.category;
+
+
+    // Render tags
+    renderTags(note);
+    // Clear tag input
+    tagInput.value = "";
 
 
     // Update pin button
@@ -810,6 +920,9 @@ function handleDeleteButton() {
         // Reset editor footer
         lastSavedEl.textContent = "Last saved: Never";
         wordCountEl.textContent = "0 words";
+        // Clear tags display
+        tagsDisplay.innerHTML = "";
+        tagInput.value = "";
 
 
         displayNotes();
@@ -850,6 +963,9 @@ function handleDeleteButton() {
     // Reset editor footer
     lastSavedEl.textContent = "Last saved: Never";
     wordCountEl.textContent = "0 words";
+    // Clear tags display
+    tagsDisplay.innerHTML = "";
+    tagInput.value = "";
 
 
     displayNotes();

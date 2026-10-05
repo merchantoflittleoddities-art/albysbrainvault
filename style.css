@@ -454,6 +454,122 @@ body {
 
 
 /* =========================
+   TAGS
+========================= */
+
+.tags-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tags-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #777784;
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+
+.tags-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+}
+
+.tags-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-height: 24px;
+}
+
+.tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px 3px 6px;
+    background: #252530;
+    border: 1px solid #383848;
+    border-radius: 12px;
+    font-size: 11px;
+    color: #b8b8c8;
+    white-space: nowrap;
+}
+
+.tag-chip:hover {
+    background: #2d2d3a;
+    border-color: #484858;
+}
+
+.tag-chip .tag-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: #888898;
+    cursor: pointer;
+    font-size: 10px;
+    line-height: 1;
+    padding: 0;
+    margin-left: 2px;
+}
+
+.tag-chip .tag-remove:hover {
+    background: #3a3a4a;
+    color: #ff6b6b;
+}
+
+.tag-input {
+    flex: 1;
+    min-width: 120px;
+    background: #181820;
+    border: 1px solid #292934;
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: white;
+    font-size: 12px;
+    outline: none;
+    font-family: inherit;
+}
+
+.tag-input:focus {
+    border-color: #484858;
+}
+
+.tag-input::placeholder {
+    color: #555565;
+}
+
+
+/* Note card tags */
+.note-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+}
+
+.note-card-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    background: #20202a;
+    border: 1px solid #30303c;
+    border-radius: 10px;
+    font-size: 10px;
+    color: #9999a5;
+    white-space: nowrap;
+}
+
+
+/* =========================
    EDITOR CONTENT
 ========================= */
 
