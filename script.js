@@ -141,6 +141,23 @@ function initializeApp() {
     console.log("Initializing app...");
     displayNotes();
     setupSidebarButtonHandlers();
+
+    // Open first active note on desktop only
+    if (!isMobile) {
+        const firstActiveNote =
+            notes.find(
+                note => !note.trashed
+            );
+
+
+        if (firstActiveNote) {
+
+            openNote(
+                firstActiveNote.id
+            );
+
+        }
+    }
     // Any other app initialization goes here
 }
 
@@ -234,6 +251,78 @@ logoutBtn.addEventListener("click", async () => {
 
 // Start auth initialization
 initializeAuth();
+
+
+// ================================
+// BACKGROUND IMAGES
+// ================================
+
+const BACKGROUND_IMAGES = [
+    "images/inspo 1.jpg",
+    "images/inspo 3.png",
+    "images/inspo 4.png",
+    "images/inspo 5.png",
+    "images/inspo 6.jpeg",
+    "images/inspo 7.jpg",
+    "images/inspo 8.png",
+    "images/inspo 9.jpg",
+    "images/inspo 10.jpeg"
+];
+
+function getRandomBackground() {
+    const index = Math.floor(Math.random() * BACKGROUND_IMAGES.length);
+    return BACKGROUND_IMAGES[index];
+}
+
+function ensureBackground(note) {
+    if (!note.background) {
+        note.background = getRandomBackground();
+    }
+    return note.background;
+}
+
+
+// ================================
+// NOTES DATA
+// ================================
+
+let notes = JSON.parse(localStorage.getItem("brainVaultNotes")) || [
+    {
+        id: 1,
+        title: "Welcome to Brain Vault",
+        content: "This is where your notes will live.",
+        category: "Important",
+        pinned: true,
+        trashed: false,
+        tags: []
+    },
+
+    {
+        id: 2,
+        title: "Example Note",
+        content: "Medical notes, appointments and important information...",
+        category: "Hayley",
+        pinned: false,
+        trashed: false,
+        tags: []
+    }
+];
+
+notes.forEach(ensureBackground);
+
+
+// ================================
+// SAVE NOTES
+// ================================
+
+function saveNotes() {
+
+    localStorage.setItem(
+        "brainVaultNotes",
+        JSON.stringify(notes)
+    );
+
+}
 
 
 // ================================
@@ -1593,3 +1682,10 @@ document.addEventListener("click", (e) => {
         sortDropdown.classList.add("hidden");
     }
 });
+
+
+// ================================
+// INITIAL DISPLAY
+// ================================
+
+displayNotes();
