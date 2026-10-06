@@ -2,6 +2,35 @@ console.log("🖤 Brain Vault loaded successfully!");
 
 
 // ================================
+// BACKGROUND IMAGES
+// ================================
+
+const BACKGROUND_IMAGES = [
+    "images/inspo 1.jpg",
+    "images/inspo 3.png",
+    "images/inspo 4.png",
+    "images/inspo 5.png",
+    "images/inspo 6.jpeg",
+    "images/inspo 7.jpg",
+    "images/inspo 8.png",
+    "images/inspo 9.jpg",
+    "images/inspo 10.jpeg"
+];
+
+function getRandomBackground() {
+    const index = Math.floor(Math.random() * BACKGROUND_IMAGES.length);
+    return BACKGROUND_IMAGES[index];
+}
+
+function ensureBackground(note) {
+    if (!note.background) {
+        note.background = getRandomBackground();
+    }
+    return note.background;
+}
+
+
+// ================================
 // NOTES DATA
 // ================================
 
@@ -26,6 +55,8 @@ let notes = JSON.parse(localStorage.getItem("brainVaultNotes")) || [
         tags: []
     }
 ];
+
+notes.forEach(ensureBackground);
 
 
 // ================================
@@ -216,6 +247,9 @@ const mobileBackButton =
 const lastSavedEl = document.getElementById("lastSaved");
 const wordCountEl = document.getElementById("wordCount");
 
+// Background element
+const editorPanel = document.querySelector(".editor-panel");
+
 
 // Sidebar buttons
 
@@ -395,7 +429,9 @@ function createNewNote() {
 
         tags: [],
 
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+
+        background: getRandomBackground()
 
     };
 
@@ -741,6 +777,15 @@ function openNote(noteId) {
         note.content;
 
 
+    // Ensure background exists for backward compatibility
+    ensureBackground(note);
+
+    // Apply background to editor panel
+    if (editorPanel) {
+        editorPanel.style.setProperty("--note-background", `url("${note.background}")`);
+    }
+
+
     // Ensure tags array exists for backward compatibility
     if (!note.tags) {
         note.tags = [];
@@ -1038,6 +1083,10 @@ function handleDeleteButton() {
         // Clear tags display
         tagsDisplay.innerHTML = "";
         tagInput.value = "";
+        // Clear background
+        if (editorPanel) {
+            editorPanel.style.removeProperty("--note-background");
+        }
 
 displayNotes();
 
@@ -1076,15 +1125,19 @@ displayNotes();
     noteContent.value =
         "";
 
-    // Reset editor footer
+// Reset editor footer
     lastSavedEl.textContent = "Last saved: Never";
     wordCountEl.textContent = "0 words";
     // Clear tags display
     tagsDisplay.innerHTML = "";
     tagInput.value = "";
+    // Clear background
+    if (editorPanel) {
+        editorPanel.style.removeProperty("--note-background");
+    }
 
 
-    displayNotes();
+displayNotes();
 
     // Close mobile editor after delete
     closeMobileEditor();
@@ -1282,6 +1335,10 @@ if (mobileBackButton) {
         tagInput.value = "";
         // Reset pin button
         pinButton.textContent = "📍";
+        // Clear background
+        if (editorPanel) {
+            editorPanel.style.removeProperty("--note-background");
+        }
         // Refresh notes list
         displayNotes();
     });
