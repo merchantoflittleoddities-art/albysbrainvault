@@ -1790,6 +1790,178 @@ body {
 }
 
 /* =========================
+   MIGRATION MODAL
+========================= */
+
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-xl);
+}
+
+.modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    animation: modalOverlayFade 0.2s var(--transition-base);
+}
+
+@keyframes modalOverlayFade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-container {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg), 0 0 0 1px rgba(54, 148, 111, 0.1);
+    animation: modalSlideUp 0.3s var(--transition-slow);
+    overflow: hidden;
+}
+
+@keyframes modalSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-header {
+    padding: var(--space-lg) var(--space-xl);
+    border-bottom: 1px solid var(--color-border-subtle);
+    background: linear-gradient(135deg, var(--color-primary-green-light), transparent);
+}
+
+.modal-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    letter-spacing: -0.3px;
+}
+
+.modal-body {
+    padding: var(--space-xl);
+    color: var(--color-text-secondary);
+    line-height: 1.7;
+}
+
+.modal-body p {
+    margin-bottom: var(--space-md);
+}
+
+.modal-body p:last-of-type {
+    margin-bottom: var(--space-lg);
+}
+
+.migration-details {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.migration-details li {
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-input);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.migration-details li::before {
+    content: '✓';
+    color: var(--color-primary-green);
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-md);
+    padding: var(--space-lg) var(--space-xl);
+    border-top: 1px solid var(--color-border-subtle);
+    background: var(--color-bg-secondary);
+}
+
+.modal-btn {
+    padding: var(--space-sm) var(--space-xl);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border: 1px solid transparent;
+}
+
+.modal-btn.primary {
+    background: linear-gradient(135deg, var(--color-primary-green), var(--color-primary-green-hover));
+    color: var(--color-text-on-green);
+    border-color: rgba(54, 148, 111, 0.3);
+    box-shadow: var(--shadow-sm), 0 0 0 1px rgba(54, 148, 111, 0.1);
+}
+
+.modal-btn.primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--color-primary-green-hover), #256a50);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md), var(--shadow-glow-green);
+}
+
+.modal-btn.primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.modal-btn.secondary {
+    background: var(--color-bg-input);
+    border-color: var(--color-border-default);
+    color: var(--color-text-secondary);
+}
+
+.modal-btn.secondary:hover {
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-border-accent);
+    color: var(--color-text-primary);
+}
+
+.modal-status {
+    padding: var(--space-md) var(--space-xl);
+    font-size: 13px;
+    text-align: center;
+    border-top: 1px solid var(--color-border-subtle);
+}
+
+.modal-status.success {
+    color: var(--color-primary-green);
+    background: var(--color-primary-green-light);
+}
+
+.modal-status.error {
+    color: #ff6b6b;
+    background: rgba(220, 80, 80, 0.1);
+}
+
+/* =========================
    FOCUS VISIBLE (Accessibility)
 ========================= */
 
