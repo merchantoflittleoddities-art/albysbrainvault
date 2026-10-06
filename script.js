@@ -208,13 +208,16 @@ async function checkMigrationNeeded() {
             return;
         }
 
-        // Only offer migration if Supabase is empty AND local notes exist
-        const localNotesCount = notes.length;
-        if (count === 0 && localNotesCount > 0) {
-            console.log(`Migration check: ${localNotesCount} local note(s), 0 Supabase notes — showing prompt`);
-            showMigrationModal(localNotesCount);
+        // Filter active (non-trashed) notes for migration
+        const activeNotes = notes.filter(note => !note.trashed);
+        const activeNotesCount = activeNotes.length;
+
+        // Only offer migration if Supabase is empty AND active local notes exist
+        if (count === 0 && activeNotesCount > 0) {
+            console.log(`Migration check: ${activeNotesCount} active local note(s), 0 Supabase notes — showing prompt`);
+            showMigrationModal(activeNotesCount);
         } else {
-            console.log(`Migration check: ${localNotesCount} local note(s), ${count} Supabase note(s) — no migration needed`);
+            console.log(`Migration check: ${activeNotesCount} active local note(s) (${notes.length} total), ${count} Supabase note(s) — no migration needed`);
         }
     } catch (err) {
         console.error("Migration check error:", err);
@@ -272,8 +275,11 @@ async function handleMigrationConfirm() {
             throw new Error("Unable to get authenticated user");
         }
 
-        // Map local notes to Supabase schema
-        const notesToInsert = notes.map(note => ({
+        // Filter active (non-trashed) notes for migration
+        const activeNotes = notes.filter(note => !note.trashed);
+
+        // Map active local notes to Supabase schema
+        const notesToInsert = activeNotes.map(note => ({
             user_id: user.id,
             title: note.title,
             content: note.content,
@@ -286,7 +292,7 @@ async function handleMigrationConfirm() {
             updated_at: note.updatedAt || new Date().toISOString()
         }));
 
-        console.log(`Migrating ${notesToInsert.length} notes to Supabase...`);
+        console.log(`Migrating ${notesToInsert.length} active notes to Supabase...`);
 
         const { data, error } = await supabaseClient
             .from("notes")
@@ -307,7 +313,7 @@ async function handleMigrationConfirm() {
         // Mark migration as done locally (prevents re-prompt on same device)
         localStorage.setItem("brainVaultMigrationDone", "true");
 
-        statusEl.textContent = `✅ Successfully migrated ${insertedCount} note(s) to Supabase!`;
+        statusEl.textContent = `✅ Successfully migrated ${insertedCount} active note(s) to Supabase!`;
         statusEl.className = "modal-status success";
 
         console.log(`Migration complete: ${insertedCount} notes inserted`);
