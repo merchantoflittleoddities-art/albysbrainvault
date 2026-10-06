@@ -137,7 +137,7 @@ async function initializeAuth() {
 }
 
 // Initialize the main app (notes, UI, event listeners)
-function initializeApp() {
+async function initializeApp() {
     console.log("Initializing app...");
     displayNotes();
     setupSidebarButtonHandlers();
@@ -161,10 +161,10 @@ function initializeApp() {
     // Any other app initialization goes here
 
     // Phase 2A: Check if migration from localStorage to Supabase is needed
-    checkMigrationNeeded();
+    await checkMigrationNeeded();
 
     // Phase 1: Supabase read test - verify we can read user's notes
-    testSupabaseRead();
+    await testSupabaseRead();
 }
 
 async function testSupabaseRead() {
