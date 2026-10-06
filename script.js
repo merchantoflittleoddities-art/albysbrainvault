@@ -1,76 +1,202 @@
-console.log("🖤 Brain Vault loaded successfully!");
-
-
 // ================================
-// BACKGROUND IMAGES
+// SUPABASE AUTHENTICATION
 // ================================
 
-const BACKGROUND_IMAGES = [
-    "images/inspo 1.jpg",
-    "images/inspo 3.png",
-    "images/inspo 4.png",
-    "images/inspo 5.png",
-    "images/inspo 6.jpeg",
-    "images/inspo 7.jpg",
-    "images/inspo 8.png",
-    "images/inspo 9.jpg",
-    "images/inspo 10.jpeg"
-];
+// Supabase configuration
+const SUPABASE_URL = "https://zbfrfjeotxjwablxxiif.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_tEl8zScIAQQk9eH1J_t-_g_hVy4sdxI";
 
-function getRandomBackground() {
-    const index = Math.floor(Math.random() * BACKGROUND_IMAGES.length);
-    return BACKGROUND_IMAGES[index];
-}
-
-function ensureBackground(note) {
-    if (!note.background) {
-        note.background = getRandomBackground();
+// Create a single reusable Supabase client
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
     }
-    return note.background;
+});
+
+// Auth state
+let isAuthenticated = false;
+let authInitialized = false;
+
+// Login screen elements
+const loginScreen = document.getElementById("loginScreen");
+const mainApp = document.getElementById("mainApp");
+const loginForm = document.getElementById("loginForm");
+const loginEmail = document.getElementById("loginEmail");
+const loginPassword = document.getElementById("loginPassword");
+const loginSubmit = document.getElementById("loginSubmit");
+const loginError = document.getElementById("loginError");
+const logoutBtn = document.getElementById("logoutBtn");
+
+// Show error message on login screen
+function showLoginError(message) {
+    loginError.textContent = message;
+    loginError.hidden = false;
+    loginEmail.setAttribute("aria-invalid", "true");
+    loginPassword.setAttribute("aria-invalid", "true");
 }
 
+// Clear error message
+function clearLoginError() {
+    loginError.textContent = "";
+    loginError.hidden = true;
+    loginEmail.removeAttribute("aria-invalid");
+    loginPassword.removeAttribute("aria-invalid");
+}
 
-// ================================
-// NOTES DATA
-// ================================
+// Set loading state on login button
+function setLoginLoading(loading) {
+    loginSubmit.disabled = loading;
+    loginSubmit.classList.toggle("loading", loading);
+    loginEmail.disabled = loading;
+    loginPassword.disabled = loading;
+}
 
-let notes = JSON.parse(localStorage.getItem("brainVaultNotes")) || [
-    {
-        id: 1,
-        title: "Welcome to Brain Vault",
-        content: "This is where your notes will live.",
-        category: "Important",
-        pinned: true,
-        trashed: false,
-        tags: []
-    },
+// Handle Supabase auth errors with user-friendly messages
+function getAuthErrorMessage(error) {
+    if (!error) return "An unexpected error occurred. Please try again.";
 
-    {
-        id: 2,
-        title: "Example Note",
-        content: "Medical notes, appointments and important information...",
-        category: "Hayley",
-        pinned: false,
-        trashed: false,
-        tags: []
+    const message = error.message || error.toString();
+
+    // Map common Supabase auth errors to friendly messages
+    if (message.includes("Invalid login credentials") || message.includes("Email not confirmed")) {
+        return "Invalid email or password. Please check your credentials and try again.";
     }
-];
+    if (message.includes("Email not confirmed")) {
+        return "Please check your email and confirm your address before signing in.";
+    }
+    if (message.includes("Too many requests")) {
+        return "Too many login attempts. Please wait a moment and try again.";
+    }
+    if (message.includes("network") || message.includes("fetch") || message.includes("Failed to fetch")) {
+        return "Unable to connect. Please check your internet connection and try again.";
+    }
+    if (message.includes("User not found") || message.includes("Invalid email")) {
+        return "No account found with that email address.";
+    }
 
-notes.forEach(ensureBackground);
-
-
-// ================================
-// SAVE NOTES
-// ================================
-
-function saveNotes() {
-
-    localStorage.setItem(
-        "brainVaultNotes",
-        JSON.stringify(notes)
-    );
-
+    // Generic fallback
+    return "Sign in failed. Please try again.";
 }
+
+// Show the main app and hide login screen
+function showMainApp() {
+    loginScreen.hidden = true;
+    mainApp.hidden = false;
+    isAuthenticated = true;
+    document.body.style.overflow = "";
+}
+
+// Show login screen and hide main app
+function showLoginScreen() {
+    mainApp.hidden = true;
+    loginScreen.hidden = false;
+    isAuthenticated = false;
+    clearLoginError();
+    loginForm.reset();
+    // Focus email input for better UX
+    setTimeout(() => loginEmail.focus(), 100);
+}
+
+// Initialize auth - check existing session on page load
+async function initializeAuth() {
+    // Prevent multiple initializations
+    if (authInitialized) return;
+    authInitialized = true;
+
+    try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+
+        if (error) {
+            console.error("Auth session error:", error);
+            showLoginScreen();
+            return;
+        }
+
+        if (session) {
+            // Valid session exists - show main app
+            showMainApp();
+            initializeApp();
+        } else {
+            // No session - show login screen
+            showLoginScreen();
+        }
+    } catch (err) {
+        console.error("Auth initialization error:", err);
+        showLoginScreen();
+    }
+}
+
+// Listen for auth state changes
+supabase.auth.onAuthStateChange((event, session) => {
+    console.log("Auth state changed:", event, session ? "session exists" : "no session");
+
+    if (event === "SIGNED_IN" && session) {
+        showMainApp();
+        initializeApp();
+    } else if (event === "SIGNED_OUT") {
+        showLoginScreen();
+    } else if (event === "TOKEN_REFRESHED" && session) {
+        // Session refreshed, user stays logged in
+        console.log("Session refreshed");
+    }
+    // Note: We don't handle INITIAL_SESSION here since we manually check with getSession()
+});
+
+// Handle login form submission
+loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    clearLoginError();
+
+    const email = loginEmail.value.trim();
+    const password = loginPassword.value;
+
+    if (!email || !password) {
+        showLoginError("Please enter both email and password.");
+        return;
+    }
+
+    setLoginLoading(true);
+
+    try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
+
+        if (error) {
+            throw error;
+        }
+
+        // Success - onAuthStateChange will handle showing the main app
+        console.log("Login successful:", data.user?.email);
+    } catch (err) {
+        console.error("Login error:", err);
+        showLoginError(getAuthErrorMessage(err));
+    } finally {
+        setLoginLoading(false);
+    }
+});
+
+// Handle logout
+logoutBtn.addEventListener("click", async () => {
+    try {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+            console.error("Logout error:", error);
+            // Force show login screen even if signOut fails
+            showLoginScreen();
+        }
+        // onAuthStateChange will handle showing login screen
+    } catch (err) {
+        console.error("Logout error:", err);
+        showLoginScreen();
+    }
+});
+
+// Start auth initialization
+initializeAuth();
 
 
 // ================================
@@ -1430,28 +1556,3 @@ document.addEventListener("click", (e) => {
         sortDropdown.classList.add("hidden");
     }
 });
-
-
-// ================================
-// INITIAL DISPLAY
-// ================================
-
-displayNotes();
-
-
-// Open first active note on desktop only
-if (!isMobile) {
-    const firstActiveNote =
-        notes.find(
-            note => !note.trashed
-        );
-
-
-    if (firstActiveNote) {
-
-        openNote(
-            firstActiveNote.id
-        );
-
-    }
-}

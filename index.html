@@ -11,7 +11,56 @@
 
 <body>
 
-    <div class="app">
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="login-screen" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+        <div class="login-container">
+            <div class="login-header">
+                <span class="login-icon">🖤</span>
+                <h1 id="loginTitle">ALBY'S BRAIN VAULT</h1>
+                <p class="login-subtitle">Sign in to access your notes</p>
+            </div>
+
+            <form id="loginForm" class="login-form" novalidate>
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input
+                        type="email"
+                        id="loginEmail"
+                        name="email"
+                        autocomplete="email"
+                        placeholder="you@example.com"
+                        required
+                        aria-describedby="loginError"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input
+                        type="password"
+                        id="loginPassword"
+                        name="password"
+                        autocomplete="current-password"
+                        placeholder="••••••••"
+                        required
+                        aria-describedby="loginError"
+                    >
+                </div>
+
+                <div id="loginError" class="login-error" aria-live="polite" hidden></div>
+
+                <button type="submit" id="loginSubmit" class="login-submit">
+                    <span class="btn-text">Sign In</span>
+                    <span class="btn-loading" hidden>⟳</span>
+                </button>
+            </form>
+
+            <p class="login-note">Your notes stay private. Powered by Supabase.</p>
+        </div>
+    </div>
+
+    <!-- MAIN APP (hidden until authenticated) -->
+    <div id="mainApp" class="app" hidden>
 
         <!-- Sidebar Overlay (Mobile) -->
         <div class="sidebar-overlay" aria-hidden="true"></div>
@@ -81,6 +130,10 @@
 
                 <button class="ai-button">
                     🧠 Ask Brain Vault
+                </button>
+
+                <button id="logoutBtn" class="logout-btn" title="Sign out" aria-label="Sign out">
+                    🚪
                 </button>
 
             </header>
@@ -191,6 +244,8 @@
 
     </div>
 
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script src="script.js"></script>
 
