@@ -733,6 +733,31 @@ body {
     backdrop-filter: blur(10px);
 }
 
+/* Mobile back button */
+.mobile-back-btn {
+    display: none;
+    background: var(--color-bg-input);
+    border: 1px solid var(--color-border-subtle);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: 18px;
+    line-height: 1;
+    transition: all var(--transition-fast);
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-back-btn:hover {
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-border-accent);
+    color: var(--color-text-primary);
+    transform: translateY(-1px);
+}
+
 /* Category Select */
 .category-select {
     background: var(--color-bg-input);
@@ -1088,10 +1113,15 @@ body {
     .main {
         flex: 1;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
     }
 
     .content {
+        flex: 1;
+        display: flex;
         flex-direction: column;
+        min-height: 0;
     }
 
     .topbar {
@@ -1116,13 +1146,17 @@ body {
         font-size: 12px;
     }
 
+    /* Notes panel - default visible, hidden when editor open */
     .notes-panel {
         width: 100%;
         min-width: 0;
-        max-height: 300px;
+        max-height: none;
+        flex: 1;
         border-right: none;
         border-bottom: 1px solid var(--color-border-subtle);
         padding: var(--space-md);
+        overflow-y: auto;
+        background: var(--color-bg-panel);
     }
 
     .panel-header {
@@ -1135,9 +1169,27 @@ body {
         align-self: flex-start;
     }
 
+    /* Editor panel - hidden by default, shown when mobile-editor-open */
     .editor-panel {
+        display: none;
         flex: 1;
+        flex-direction: column;
+        min-height: 0;
         overflow: hidden;
+    }
+
+    /* Mobile editor open state */
+    .app.mobile-editor-open .notes-panel {
+        display: none;
+    }
+
+    .app.mobile-editor-open .editor-panel {
+        display: flex;
+    }
+
+    /* Mobile back button visible when editor open */
+    .app.mobile-editor-open .mobile-back-btn {
+        display: flex;
     }
 
     .editor-toolbar {
@@ -1165,6 +1217,7 @@ body {
 
     .editor {
         padding: var(--space-lg) var(--space-md);
+        overflow-y: auto;
     }
 
     .note-title {
@@ -1181,6 +1234,36 @@ body {
         gap: var(--space-xs);
         height: auto;
         min-height: var(--editor-footer-height);
+    }
+
+    /* Larger note cards for better touch targets */
+    .note-card {
+        padding: var(--space-lg);
+        margin-bottom: var(--space-md);
+        min-height: 88px; /* Minimum touch target height */
+    }
+
+    .note-card h2 {
+        font-size: 16px;
+    }
+
+    .note-card p {
+        font-size: 14px;
+        -webkit-line-clamp: 3;
+    }
+
+    .note-card small {
+        font-size: 12px;
+    }
+
+    .note-category {
+        padding: var(--space-sm) var(--space-md);
+        font-size: 11px;
+    }
+
+    .note-card-tag {
+        padding: var(--space-sm) var(--space-md);
+        font-size: 11px;
     }
 }
 
@@ -1224,7 +1307,6 @@ body {
     }
 
     .notes-panel {
-        max-height: 250px;
         padding: var(--space-sm);
     }
 
@@ -1268,16 +1350,28 @@ body {
         font-size: 10px;
     }
 
+    /* Keep note cards large for touch targets even on small mobile */
     .note-card {
-        padding: var(--space-sm);
+        padding: var(--space-md);
+        min-height: 80px;
     }
 
     .note-card h2 {
-        font-size: 14px;
+        font-size: 15px;
     }
 
     .note-card p {
-        font-size: 12px;
+        font-size: 13px;
+    }
+
+    .note-category {
+        padding: var(--space-xs) var(--space-sm);
+        font-size: 10px;
+    }
+
+    .note-card-tag {
+        padding: var(--space-xs) var(--space-sm);
+        font-size: 10px;
     }
 }
 
@@ -1288,7 +1382,7 @@ body {
     }
 
     .notes-panel {
-        max-height: 200px;
+        max-height: none;
     }
 
     .editor {

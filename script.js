@@ -208,6 +208,10 @@ const deleteButton =
         '.editor-actions button[title="Delete note"]'
     );
 
+// Mobile back button
+const mobileBackButton =
+    document.querySelector(".mobile-back-btn");
+
 // Editor footer elements
 const lastSavedEl = document.getElementById("lastSaved");
 const wordCountEl = document.getElementById("wordCount");
@@ -253,6 +257,26 @@ let currentSort = "newest";
 // Visible notes (for page heading)
 let visibleNotes = [];
 
+// Mobile state
+let isMobile = window.innerWidth <= 768;
+
+// ================================
+// MOBILE HELPERS
+// ================================
+
+function checkMobile() {
+    isMobile = window.innerWidth <= 768;
+}
+
+function openMobileEditor() {
+    if (isMobile) {
+        document.querySelector(".app").classList.add("mobile-editor-open");
+    }
+}
+
+function closeMobileEditor() {
+    document.querySelector(".app").classList.remove("mobile-editor-open");
+}
 
 // ================================
 // NEW NOTE
@@ -667,6 +691,8 @@ function openNote(noteId) {
     // Update word count
     updateWordCount(note.content);
 
+    // Open mobile editor view
+    openMobileEditor();
 
     console.log(
         "Opened note:",
@@ -920,9 +946,10 @@ function handleDeleteButton() {
         tagsDisplay.innerHTML = "";
         tagInput.value = "";
 
+displayNotes();
 
-        displayNotes();
-
+        // Close mobile editor after restore
+        closeMobileEditor();
 
         console.log(
             "Restored note:",
@@ -965,6 +992,9 @@ function handleDeleteButton() {
 
 
     displayNotes();
+
+    // Close mobile editor after delete
+    closeMobileEditor();
 
 
     console.log(
@@ -1127,6 +1157,9 @@ sidebarButtons.forEach(
 
                 displayNotes();
 
+                // Close mobile editor when navigating via sidebar
+                closeMobileEditor();
+
             }
         );
 
@@ -1138,8 +1171,37 @@ searchInput.addEventListener(
     () => {
         currentSearchQuery = searchInput.value.trim().toLowerCase();
         displayNotes();
+        // Close mobile editor when searching
+        closeMobileEditor();
     }
 );
+
+// Mobile back button handler
+if (mobileBackButton) {
+    mobileBackButton.addEventListener("click", () => {
+        closeMobileEditor();
+        currentNoteId = null;
+        noteTitle.value = "";
+        noteContent.value = "";
+        lastSavedEl.textContent = "Last saved: Never";
+        wordCountEl.textContent = "0 words";
+        tagsDisplay.innerHTML = "";
+        tagInput.value = "";
+        // Reset pin button
+        pinButton.textContent = "📍";
+        // Refresh notes list
+        displayNotes();
+    });
+}
+
+// Window resize handler to update mobile state
+window.addEventListener("resize", () => {
+    checkMobile();
+    // Close mobile editor if resized to desktop
+    if (!isMobile) {
+        closeMobileEditor();
+    }
+});
 
 
 // ================================
@@ -1227,18 +1289,19 @@ document.addEventListener("click", (e) => {
 displayNotes();
 
 
-// Open first active note
+// Open first active note on desktop only
+if (!isMobile) {
+    const firstActiveNote =
+        notes.find(
+            note => !note.trashed
+        );
 
-const firstActiveNote =
-    notes.find(
-        note => !note.trashed
-    );
 
+    if (firstActiveNote) {
 
-if (firstActiveNote) {
+        openNote(
+            firstActiveNote.id
+        );
 
-    openNote(
-        firstActiveNote.id
-    );
-
+    }
 }
