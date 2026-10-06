@@ -549,6 +549,10 @@ function displayNotes() {
                 "note-card"
             );
 
+            if (note.pinned) {
+                noteCard.classList.add("pinned");
+            }
+
 
             noteCard.dataset.id =
                 note.id;
