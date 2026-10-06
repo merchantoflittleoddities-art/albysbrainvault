@@ -718,6 +718,26 @@ body {
     flex-direction: column;
     min-width: 0;
     background: var(--color-bg-primary);
+    position: relative;
+}
+
+.editor-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: var(--note-background, none);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0.12;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: inherit;
+}
+
+.editor-panel > * {
+    position: relative;
+    z-index: 1;
 }
 
 .editor-toolbar {
