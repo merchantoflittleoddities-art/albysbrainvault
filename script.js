@@ -261,6 +261,95 @@ let visibleNotes = [];
 let isMobile = window.innerWidth <= 768;
 
 // ================================
+// MOBILE SIDEBAR (HAMBURGER MENU)
+// ================================
+
+const hamburgerButton = document.querySelector(".hamburger-btn");
+const sidebar = document.querySelector(".sidebar");
+const sidebarOverlay = document.querySelector(".sidebar-overlay");
+
+function openMobileSidebar() {
+    if (isMobile) {
+        sidebar.classList.add("open");
+        sidebarOverlay.classList.add("visible");
+        hamburgerButton.setAttribute("aria-expanded", "true");
+        sidebarOverlay.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+    }
+}
+
+function closeMobileSidebar() {
+    sidebar.classList.remove("open");
+    sidebarOverlay.classList.remove("visible");
+    hamburgerButton.setAttribute("aria-expanded", "false");
+    sidebarOverlay.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+}
+
+function toggleMobileSidebar() {
+    if (sidebar.classList.contains("open")) {
+        closeMobileSidebar();
+    } else {
+        openMobileSidebar();
+    }
+}
+
+// Hamburger button click
+if (hamburgerButton) {
+    hamburgerButton.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleMobileSidebar();
+    });
+}
+
+// Close sidebar when clicking overlay
+if (sidebarOverlay) {
+    sidebarOverlay.addEventListener("click", closeMobileSidebar);
+}
+
+// Close sidebar on escape key
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && sidebar.classList.contains("open")) {
+        closeMobileSidebar();
+    }
+});
+
+// Close sidebar when selecting a sidebar item (on mobile)
+function closeSidebarOnMobile() {
+    if (isMobile && sidebar.classList.contains("open")) {
+        closeMobileSidebar();
+    }
+}
+
+function setupSidebarButtonHandlers() {
+    const sidebarButtons = document.querySelectorAll(".category-btn");
+    sidebarButtons.forEach(button => {
+        // Remove existing mobile click handler to avoid duplicates
+        button.removeEventListener("click", closeSidebarOnMobile);
+        // Add handler to close sidebar on mobile after navigation
+        button.addEventListener("click", closeSidebarOnMobile);
+    });
+}
+
+// Window resize handler to update mobile state
+window.addEventListener("resize", () => {
+    const wasMobile = isMobile;
+    checkMobile();
+    // Close mobile editor if resized to desktop
+    if (!isMobile) {
+        closeMobileEditor();
+        closeMobileSidebar();
+    }
+    // Re-setup sidebar button handlers when mobile state changes
+    if (wasMobile !== isMobile) {
+        setupSidebarButtonHandlers();
+    }
+});
+
+// Initial setup
+setupSidebarButtonHandlers();
+
+// ================================
 // MOBILE HELPERS
 // ================================
 
