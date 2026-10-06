@@ -249,9 +249,6 @@ logoutBtn.addEventListener("click", async () => {
     }
 });
 
-// Start auth initialization
-initializeAuth();
-
 
 // ================================
 // BACKGROUND IMAGES
@@ -323,6 +320,10 @@ function saveNotes() {
     );
 
 }
+
+
+// Start auth initialization
+initializeAuth();
 
 
 // ================================
@@ -1682,10 +1683,3 @@ document.addEventListener("click", (e) => {
         sortDropdown.classList.add("hidden");
     }
 });
-
-
-// ================================
-// INITIAL DISPLAY
-// ================================
-
-displayNotes();
