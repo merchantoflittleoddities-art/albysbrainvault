@@ -7,7 +7,7 @@ const SUPABASE_URL = "https://zbfrfjeotxjwablxxiif.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_tEl8zScIAQQk9eH1J_t-_g_hVy4sdxI";
 
 // Create a single reusable Supabase client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
         persistSession: true,
         autoRefreshToken: true,
@@ -109,7 +109,7 @@ async function initializeAuth() {
 
     try {
         console.log("Initializing auth, checking existing session...");
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
 
         if (error) {
             console.error("Auth session error:", error);
@@ -145,7 +145,7 @@ function initializeApp() {
 }
 
 // Listen for auth state changes
-supabase.auth.onAuthStateChange((event, session) => {
+supabaseClient.auth.onAuthStateChange((event, session) => {
     console.log("Auth state changed:", event, session ? "session exists" : "no session");
 
     try {
@@ -195,7 +195,7 @@ loginForm.addEventListener("submit", async (e) => {
         setLoginLoading(true);
 
         console.log("Attempting login for:", email);
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
             email,
             password
         });
@@ -219,7 +219,7 @@ loginForm.addEventListener("submit", async (e) => {
 logoutBtn.addEventListener("click", async () => {
     try {
         console.log("Signing out...");
-        const { error } = await supabase.auth.signOut();
+        const { error } = await supabaseClient.auth.signOut();
         if (error) {
             console.error("Logout error:", error);
             // Force show login screen even if signOut fails
