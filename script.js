@@ -264,7 +264,7 @@ const BACKGROUND_IMAGES = [
     "images/inspo 8.png",
     "images/inspo 9.jpg",
     "images/inspo 10.jpeg",
-    "images/inspo 11.jpg",
+    "images/Inspo 11.jpg",
     "images/inspo 12.jpg",
     "images/inspo 14.jpg",
     "images/inspo 15.jpg",
