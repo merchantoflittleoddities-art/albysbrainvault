@@ -108,6 +108,7 @@ async function initializeAuth() {
     authInitialized = true;
 
     try {
+        console.log("Initializing auth, checking existing session...");
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
@@ -118,6 +119,7 @@ async function initializeAuth() {
 
         if (session) {
             // Valid session exists - show main app
+            console.log("Existing session found for:", session.user?.email);
             showMainApp();
             if (!appInitialized) {
                 appInitialized = true;
@@ -125,6 +127,7 @@ async function initializeAuth() {
             }
         } else {
             // No session - show login screen
+            console.log("No existing session, showing login screen");
             showLoginScreen();
         }
     } catch (err) {
@@ -133,48 +136,72 @@ async function initializeAuth() {
     }
 }
 
+// Initialize the main app (notes, UI, event listeners)
+function initializeApp() {
+    console.log("Initializing app...");
+    displayNotes();
+    setupSidebarButtonHandlers();
+    // Any other app initialization goes here
+}
+
 // Listen for auth state changes
 supabase.auth.onAuthStateChange((event, session) => {
     console.log("Auth state changed:", event, session ? "session exists" : "no session");
 
-    if (event === "SIGNED_IN" && session) {
-        showMainApp();
-        if (!appInitialized) {
-            appInitialized = true;
-            initializeApp();
+    try {
+        if (event === "SIGNED_IN" && session) {
+            showMainApp();
+            if (!appInitialized) {
+                appInitialized = true;
+                initializeApp();
+            }
+        } else if (event === "SIGNED_OUT") {
+            showLoginScreen();
+            appInitialized = false;
+        } else if (event === "TOKEN_REFRESHED" && session) {
+            // Session refreshed, user stays logged in
+            console.log("Session refreshed");
+        } else if (event === "INITIAL_SESSION") {
+            // Handle initial session if needed (we also check manually in initializeAuth)
+            console.log("Initial session event:", session ? "session exists" : "no session");
         }
-    } else if (event === "SIGNED_OUT") {
-        showLoginScreen();
-        appInitialized = false;
-    } else if (event === "TOKEN_REFRESHED" && session) {
-        // Session refreshed, user stays logged in
-        console.log("Session refreshed");
+    } catch (err) {
+        console.error("Error in auth state change handler:", err);
+        // Don't let auth state errors break the UI
+        if (event === "SIGNED_IN") {
+            showLoginError("Authentication succeeded but app initialization failed. Please refresh the page.");
+        }
     }
-    // Note: We don't handle INITIAL_SESSION here since we manually check with getSession()
+    // Note: We don't rely solely on INITIAL_SESSION since we manually check with getSession()
 });
 
 // Handle login form submission
 loginForm.addEventListener("submit", async (e) => {
+    // Prevent form submission/reload immediately - must be first
     e.preventDefault();
-    clearLoginError();
-
-    const email = loginEmail.value.trim();
-    const password = loginPassword.value;
-
-    if (!email || !password) {
-        showLoginError("Please enter both email and password.");
-        return;
-    }
-
-    setLoginLoading(true);
+    e.stopPropagation();
 
     try {
+        clearLoginError();
+
+        const email = loginEmail.value.trim();
+        const password = loginPassword.value;
+
+        if (!email || !password) {
+            showLoginError("Please enter both email and password.");
+            return;
+        }
+
+        setLoginLoading(true);
+
+        console.log("Attempting login for:", email);
         const { data, error } = await supabase.auth.signInWithPassword({
             email,
             password
         });
 
         if (error) {
+            console.error("Supabase signInWithPassword error:", error);
             throw error;
         }
 
@@ -186,11 +213,12 @@ loginForm.addEventListener("submit", async (e) => {
     } finally {
         setLoginLoading(false);
     }
-});
+}, { passive: false });
 
 // Handle logout
 logoutBtn.addEventListener("click", async () => {
     try {
+        console.log("Signing out...");
         const { error } = await supabase.auth.signOut();
         if (error) {
             console.error("Logout error:", error);
