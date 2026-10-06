@@ -18,6 +18,7 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Auth state
 let isAuthenticated = false;
 let authInitialized = false;
+let appInitialized = false;
 
 // Login screen elements
 const loginScreen = document.getElementById("loginScreen");
@@ -60,11 +61,12 @@ function getAuthErrorMessage(error) {
     const message = error.message || error.toString();
 
     // Map common Supabase auth errors to friendly messages
-    if (message.includes("Invalid login credentials") || message.includes("Email not confirmed")) {
-        return "Invalid email or password. Please check your credentials and try again.";
-    }
+    // Check "Email not confirmed" FIRST before the generic invalid credentials
     if (message.includes("Email not confirmed")) {
         return "Please check your email and confirm your address before signing in.";
+    }
+    if (message.includes("Invalid login credentials")) {
+        return "Invalid email or password. Please check your credentials and try again.";
     }
     if (message.includes("Too many requests")) {
         return "Too many login attempts. Please wait a moment and try again.";
@@ -117,7 +119,10 @@ async function initializeAuth() {
         if (session) {
             // Valid session exists - show main app
             showMainApp();
-            initializeApp();
+            if (!appInitialized) {
+                appInitialized = true;
+                initializeApp();
+            }
         } else {
             // No session - show login screen
             showLoginScreen();
@@ -134,9 +139,13 @@ supabase.auth.onAuthStateChange((event, session) => {
 
     if (event === "SIGNED_IN" && session) {
         showMainApp();
-        initializeApp();
+        if (!appInitialized) {
+            appInitialized = true;
+            initializeApp();
+        }
     } else if (event === "SIGNED_OUT") {
         showLoginScreen();
+        appInitialized = false;
     } else if (event === "TOKEN_REFRESHED" && session) {
         // Session refreshed, user stays logged in
         console.log("Session refreshed");
