@@ -159,6 +159,27 @@ function initializeApp() {
         }
     }
     // Any other app initialization goes here
+
+    // Phase 1: Supabase read test - verify we can read user's notes
+    testSupabaseRead();
+}
+
+async function testSupabaseRead() {
+    try {
+        console.log("Phase 1: Testing Supabase read...");
+        const { data, error } = await supabaseClient
+            .from("notes")
+            .select("id, title, category, pinned, trashed, tags, created_at, updated_at");
+
+        if (error) {
+            console.error("Phase 1: Supabase read failed:", error);
+            return;
+        }
+
+        console.log(`Phase 1: Supabase read SUCCESS - ${data?.length ?? 0} note(s) returned`);
+    } catch (err) {
+        console.error("Phase 1: Supabase read error:", err);
+    }
 }
 
 // Listen for auth state changes
