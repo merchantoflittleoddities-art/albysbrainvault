@@ -1107,8 +1107,8 @@ body {
 
 /* Mobile - Below 768px */
 @media (max-width: 768px) {
-    .hamburger-btn {
-        display: flex;
+    .topbar .hamburger-btn {
+        display: flex !important;
         order: 1;
     }
 
