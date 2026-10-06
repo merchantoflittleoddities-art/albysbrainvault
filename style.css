@@ -1025,6 +1025,59 @@ body {
 }
 
 /* =========================
+   HAMBURGER BUTTON
+========================= */
+
+.hamburger-btn {
+    display: none;
+    width: 44px;
+    height: 44px;
+    padding: var(--space-sm);
+    background: var(--color-bg-input);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.hamburger-btn:hover {
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-border-accent);
+}
+
+.hamburger-btn:focus-visible {
+    outline: 2px solid var(--color-primary-green);
+    outline-offset: 2px;
+}
+
+.hamburger-line {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: var(--color-text-primary);
+    border-radius: var(--radius-full);
+    transition: all var(--transition-base);
+    transform-origin: center;
+}
+
+.hamburger-btn[aria-expanded="true"] .hamburger-line:nth-child(1) {
+    transform: translateY(6px) rotate(45deg);
+}
+
+.hamburger-btn[aria-expanded="true"] .hamburger-line:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger-btn[aria-expanded="true"] .hamburger-line:nth-child(3) {
+    transform: translateY(-6px) rotate(-45deg);
+}
+
+/* =========================
    RESPONSIVE DESIGN
 ========================= */
 
@@ -1054,60 +1107,102 @@ body {
 
 /* Mobile - Below 768px */
 @media (max-width: 768px) {
+    .hamburger-btn {
+        display: flex;
+        order: 1;
+    }
+
     .app {
         flex-direction: column;
     }
 
     .sidebar {
-        width: 100%;
-        min-width: 0;
-        max-height: 280px;
-        border-right: none;
-        border-bottom: 1px solid var(--color-border-subtle);
-        padding: var(--space-md);
-        flex-wrap: wrap;
-        flex-direction: row;
-        align-items: flex-start;
-        gap: var(--space-md);
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 280px;
+        max-width: 85vw;
+        height: 100vh;
+        max-height: 100vh;
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform var(--transition-slow) ease;
+        border-right: 1px solid var(--color-border-subtle);
+        border-bottom: none;
+        padding: var(--space-xl) var(--space-md) var(--space-lg);
+        flex-wrap: nowrap;
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-lg);
         overflow-y: auto;
+        background:
+            linear-gradient(180deg, var(--color-deep-navy-dark) 0%, var(--color-deep-navy) 100%);
+        box-shadow: var(--shadow-lg), inset -1px 0 0 rgba(255, 255, 255, 0.02);
     }
 
     .sidebar::before {
         border-radius: 0;
     }
 
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(2px);
+        z-index: 999;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity var(--transition-slow) ease, visibility var(--transition-slow) ease;
+    }
+
+    .sidebar-overlay.visible {
+        opacity: 1;
+        visibility: visible;
+    }
+
     .logo {
-        margin-bottom: 0;
-        padding-bottom: 0;
-        border-bottom: none;
+        margin-bottom: var(--space-lg);
+        padding-bottom: var(--space-md);
+        border-bottom: 1px solid var(--color-border-subtle);
         flex-shrink: 0;
     }
 
     .new-note-btn {
-        width: auto;
-        margin-bottom: 0;
-        padding: var(--space-sm) var(--space-lg);
-        font-size: 13px;
+        width: 100%;
+        margin-bottom: var(--space-lg);
+        padding: var(--space-md) var(--space-lg);
+        font-size: 14px;
         flex-shrink: 0;
     }
 
     .sidebar-section {
         margin-bottom: 0;
-        flex: 1;
-        min-width: 140px;
+        flex: none;
+        min-width: 0;
     }
 
     .sidebar-section h3 {
-        font-size: 10px;
+        font-size: 11px;
     }
 
     .category-btn {
-        padding: var(--space-xs) var(--space-sm);
-        font-size: 12px;
+        padding: var(--space-sm) var(--space-md);
+        font-size: 13px;
     }
 
     .sidebar-bottom {
-        display: none;
+        display: block;
+        margin-top: auto;
+        padding-top: var(--space-md);
+        border-top: 1px solid var(--color-border-subtle);
+        flex-shrink: 0;
     }
 
     .main {
@@ -1276,8 +1371,9 @@ body {
     }
 
     .sidebar {
-        max-height: 320px;
-        gap: var(--space-sm);
+        width: 260px;
+        max-width: 90vw;
+        gap: var(--space-md);
     }
 
     .logo span {
