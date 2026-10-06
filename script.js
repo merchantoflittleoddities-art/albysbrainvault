@@ -137,7 +137,7 @@ async function initializeAuth() {
 }
 
 // Initialize the main app (notes, UI, event listeners)
-function initializeApp() {
+async function initializeApp() {
     console.log("Initializing app...");
     displayNotes();
     setupSidebarButtonHandlers();
@@ -160,8 +160,11 @@ function initializeApp() {
     }
     // Any other app initialization goes here
 
+    // Phase 2A: Check if migration from localStorage to Supabase is needed
+    await checkMigrationNeeded();
+
     // Phase 1: Supabase read test - verify we can read user's notes
-    testSupabaseRead();
+    await testSupabaseRead();
 }
 
 async function testSupabaseRead() {
@@ -180,6 +183,156 @@ async function testSupabaseRead() {
     } catch (err) {
         console.error("Phase 1: Supabase read error:", err);
     }
+}
+
+// ================================
+// PHASE 2A: LOCALSTORAGE → SUPABASE MIGRATION
+// ================================
+
+async function checkMigrationNeeded() {
+    try {
+        // Only run for authenticated users
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) {
+            console.log("Migration check skipped: no authenticated user");
+            return;
+        }
+
+        // Check if user has any notes in Supabase
+        const { count, error: countError } = await supabaseClient
+            .from("notes")
+            .select("*", { count: "exact", head: true });
+
+        if (countError) {
+            console.error("Migration check: failed to count Supabase notes:", countError);
+            return;
+        }
+
+        // Only offer migration if Supabase is empty AND local notes exist
+        const localNotesCount = notes.length;
+        if (count === 0 && localNotesCount > 0) {
+            console.log(`Migration check: ${localNotesCount} local note(s), 0 Supabase notes — showing prompt`);
+            showMigrationModal(localNotesCount);
+        } else {
+            console.log(`Migration check: ${localNotesCount} local note(s), ${count} Supabase note(s) — no migration needed`);
+        }
+    } catch (err) {
+        console.error("Migration check error:", err);
+    }
+}
+
+function showMigrationModal(localCount) {
+    const modal = document.getElementById("migrationModal");
+    const countEl = document.getElementById("localNoteCount");
+    const confirmBtn = document.getElementById("migrationConfirm");
+    const notNowBtn = document.getElementById("migrationNotNow");
+    const statusEl = document.getElementById("migrationStatus");
+
+    if (!modal || !countEl || !confirmBtn || !notNowBtn || !statusEl) {
+        console.error("Migration modal elements not found");
+        return;
+    }
+
+    countEl.textContent = localCount;
+    statusEl.hidden = true;
+    statusEl.textContent = "";
+    statusEl.className = "modal-status";
+    confirmBtn.disabled = false;
+    notNowBtn.disabled = false;
+
+    // Remove any existing listeners
+    confirmBtn.replaceWith(confirmBtn.cloneNode(true));
+    notNowBtn.replaceWith(notNowBtn.cloneNode(true));
+
+    const newConfirmBtn = document.getElementById("migrationConfirm");
+    const newNotNowBtn = document.getElementById("migrationNotNow");
+
+    newConfirmBtn.addEventListener("click", handleMigrationConfirm);
+    newNotNowBtn.addEventListener("click", handleMigrationNotNow);
+
+    modal.hidden = false;
+    // Focus confirm button for accessibility
+    setTimeout(() => newConfirmBtn.focus(), 100);
+}
+
+async function handleMigrationConfirm() {
+    const confirmBtn = document.getElementById("migrationConfirm");
+    const notNowBtn = document.getElementById("migrationNotNow");
+    const statusEl = document.getElementById("migrationStatus");
+
+    confirmBtn.disabled = true;
+    notNowBtn.disabled = true;
+    statusEl.hidden = false;
+    statusEl.textContent = "Migrating notes...";
+    statusEl.className = "modal-status";
+
+    try {
+        const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+        if (userError || !user) {
+            throw new Error("Unable to get authenticated user");
+        }
+
+        // Map local notes to Supabase schema
+        const notesToInsert = notes.map(note => ({
+            user_id: user.id,
+            title: note.title,
+            content: note.content,
+            category: note.category,
+            pinned: note.pinned,
+            trashed: note.trashed,
+            tags: note.tags || [],
+            background: note.background,
+            created_at: note.createdAt || new Date().toISOString(),
+            updated_at: note.updatedAt || new Date().toISOString()
+        }));
+
+        console.log(`Migrating ${notesToInsert.length} notes to Supabase...`);
+
+        const { data, error } = await supabaseClient
+            .from("notes")
+            .insert(notesToInsert)
+            .select("id");
+
+        if (error) {
+            throw error;
+        }
+
+        const insertedCount = data?.length ?? 0;
+        const expectedCount = notesToInsert.length;
+
+        if (insertedCount !== expectedCount) {
+            throw new Error(`Migration verification failed: expected ${expectedCount} rows, inserted ${insertedCount}`);
+        }
+
+        // Mark migration as done locally (prevents re-prompt on same device)
+        localStorage.setItem("brainVaultMigrationDone", "true");
+
+        statusEl.textContent = `✅ Successfully migrated ${insertedCount} note(s) to Supabase!`;
+        statusEl.className = "modal-status success";
+
+        console.log(`Migration complete: ${insertedCount} notes inserted`);
+
+        // Close modal after a delay
+        setTimeout(() => {
+            const modal = document.getElementById("migrationModal");
+            if (modal) modal.hidden = true;
+        }, 2500);
+
+    } catch (err) {
+        console.error("Migration failed:", err);
+        statusEl.textContent = `❌ Migration failed: ${err.message}`;
+        statusEl.className = "modal-status error";
+        confirmBtn.disabled = false;
+        notNowBtn.disabled = false;
+    }
+}
+
+function handleMigrationNotNow() {
+    const modal = document.getElementById("migrationModal");
+    if (modal) {
+        modal.hidden = true;
+    }
+    console.log("Migration deferred by user");
 }
 
 // Listen for auth state changes

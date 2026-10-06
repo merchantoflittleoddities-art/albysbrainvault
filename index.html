@@ -244,6 +244,31 @@
 
     </div>
 
+    <!-- Migration Modal -->
+    <div id="migrationModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="migrationTitle">
+        <div class="modal-overlay"></div>
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 id="migrationTitle">📦 Migrate Notes to Cloud</h2>
+            </div>
+            <div class="modal-body">
+                <p>You have <strong id="localNoteCount">0</strong> note(s) stored locally in this browser.</p>
+                <p>Your Supabase cloud vault is currently empty. Would you like to copy your local notes to the cloud?</p>
+                <ul class="migration-details">
+                    <li>✅ Preserves all note data (title, content, category, tags, pins, backgrounds)</li>
+                    <li>✅ Keeps your local notes intact as a backup</li>
+                    <li>✅ One-time copy — no ongoing sync yet</li>
+                    <li>✅ You can choose "Not now" and decide later</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button id="migrationNotNow" class="modal-btn secondary">Not now</button>
+                <button id="migrationConfirm" class="modal-btn primary">Migrate notes</button>
+            </div>
+            <div id="migrationStatus" class="modal-status" hidden></div>
+        </div>
+    </div>
+
     <!-- Supabase Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
