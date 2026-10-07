@@ -493,6 +493,156 @@ let notes = JSON.parse(localStorage.getItem("brainVaultNotes")) || [
 
 notes.forEach(ensureBackground);
 
+notes.forEach(note => {
+    if (note.supabase_id === undefined) {
+        note.supabase_id = null;
+    }
+});
+
+
+// ================================
+// PHASE 2B-1: LOCAL ↔ SUPABASE ASSOCIATION
+// ================================
+
+function computeNoteHash(note) {
+    const canonical = {
+        title: note.title,
+        content: note.content,
+        category: note.category,
+        pinned: note.pinned,
+        trashed: note.trashed,
+        tags: [...(note.tags || [])].sort(),
+        background: note.background,
+        created_at: note.createdAt,
+        updated_at: note.updatedAt
+    };
+    return JSON.stringify(canonical);
+}
+
+async function computeSHA256(str) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(str);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function associateLocalSupabaseNotes() {
+    console.log("Phase 2B-1: Starting local ↔ Supabase association...");
+
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !user) {
+        console.error("Association failed: no authenticated user");
+        return { success: false, error: "Not authenticated" };
+    }
+
+    const { data: supabaseNotes, error: fetchError } = await supabaseClient
+        .from("notes")
+        .select("id, title, content, category, pinned, trashed, tags, background, created_at, updated_at")
+        .eq("user_id", user.id);
+
+    if (fetchError) {
+        console.error("Association failed: could not fetch Supabase notes", fetchError);
+        return { success: false, error: fetchError.message };
+    }
+
+    if (!supabaseNotes || supabaseNotes.length !== 12) {
+        console.error(`Association failed: expected 12 Supabase notes, got ${supabaseNotes?.length ?? 0}`);
+        return { success: false, error: `Expected 12 Supabase notes, got ${supabaseNotes?.length ?? 0}` };
+    }
+
+    const activeLocalNotes = notes.filter(note => !note.trashed);
+    if (activeLocalNotes.length !== 12) {
+        console.error(`Association failed: expected 12 active local notes, got ${activeLocalNotes.length}`);
+        return { success: false, error: `Expected 12 active local notes, got ${activeLocalNotes.length}` };
+    }
+
+    const trashedLocalNotes = notes.filter(note => note.trashed);
+    console.log(`Found ${trashedLocalNotes.length} trashed local notes (will remain untouched)`);
+
+    const supabaseHashes = new Map();
+    for (const sn of supabaseNotes) {
+        const canonical = {
+            title: sn.title,
+            content: sn.content,
+            category: sn.category,
+            pinned: sn.pinned,
+            trashed: sn.trashed,
+            tags: [...(sn.tags || [])].sort(),
+            background: sn.background,
+            created_at: sn.created_at,
+            updated_at: sn.updated_at
+        };
+        const hash = await computeSHA256(JSON.stringify(canonical));
+        supabaseHashes.set(hash, sn);
+    }
+
+    const matches = [];
+    const unmatched = [];
+
+    for (const localNote of activeLocalNotes) {
+        const localHash = await computeSHA256(computeNoteHash(localNote));
+        const supabaseNote = supabaseHashes.get(localHash);
+
+        if (!supabaseNote) {
+            unmatched.push(localNote);
+            continue;
+        }
+
+        const fieldsMatch =
+            localNote.title === supabaseNote.title &&
+            localNote.content === supabaseNote.content &&
+            localNote.category === supabaseNote.category &&
+            localNote.pinned === supabaseNote.pinned &&
+            localNote.trashed === supabaseNote.trashed &&
+            JSON.stringify([...(localNote.tags || [])].sort()) === JSON.stringify([...(supabaseNote.tags || [])].sort()) &&
+            localNote.background === supabaseNote.background &&
+            localNote.createdAt === supabaseNote.created_at &&
+            localNote.updatedAt === supabaseNote.updated_at;
+
+        if (!fieldsMatch) {
+            console.error("Hash matched but field verification failed for note:", localNote.id);
+            unmatched.push(localNote);
+            continue;
+        }
+
+        matches.push({ localNote, supabaseNote });
+    }
+
+    if (unmatched.length > 0) {
+        console.error(`Association failed: ${unmatched.length} active local note(s) could not be matched`);
+        unmatched.forEach(n => console.error("  Unmatched local note:", n.id, n.title));
+        return { success: false, error: `${unmatched.length} note(s) unmatched`, unmatched };
+    }
+
+    if (matches.length !== 12) {
+        console.error(`Association failed: expected 12 matches, got ${matches.length}`);
+        return { success: false, error: `Expected 12 matches, got ${matches.length}` };
+    }
+
+    for (const { localNote, supabaseNote } of matches) {
+        localNote.supabase_id = supabaseNote.id;
+    }
+
+    saveNotes();
+
+    console.log("Phase 2B-1: Association complete. Verification:");
+    console.log(`  - Active notes with supabase_id: ${notes.filter(n => !n.trashed && n.supabase_id).length}/12`);
+    console.log(`  - Active notes without supabase_id: ${notes.filter(n => !n.trashed && !n.supabase_id).length}`);
+    console.log(`  - Trashed notes (untouched): ${notes.filter(n => n.trashed).length}`);
+    console.log(`  - Total local notes: ${notes.length}`);
+
+    const { count: supabaseCount } = await supabaseClient
+        .from("notes")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+    console.log(`  - Supabase rows: ${supabaseCount}`);
+
+    return { success: true, matches: matches.length };
+}
+
+window.associateLocalSupabaseNotes = associateLocalSupabaseNotes;
+
 
 // ================================
 // SAVE NOTES
@@ -870,7 +1020,9 @@ function createNewNote() {
 
         updatedAt: new Date().toISOString(),
 
-        background: getRandomBackground()
+        background: getRandomBackground(),
+
+        supabase_id: null
 
     };
 
