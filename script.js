@@ -885,6 +885,93 @@ window.diagnoseBackroomsMismatch = diagnoseBackroomsMismatch;
 
 
 // ================================
+// PHASE 2B-1 LEGACY RESOLUTION: Backrooms Note
+// ================================
+
+async function resolveBackroomsLegacyMismatch() {
+    const LOCAL_NOTE_ID = 1791326621767;
+    const SUPABASE_NOTE_ID = "bb23113a-51b5-421c-b62d-a237dff714f9";
+
+    console.log("=== PHASE 2B-1 LEGACY RESOLUTION: Backrooms Note ===");
+
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !user) {
+        console.error("Resolution failed: not authenticated");
+        return { success: false, error: "Not authenticated" };
+    }
+
+    const localNote = notes.find(note => note.id === LOCAL_NOTE_ID);
+    if (!localNote) {
+        console.error("Resolution failed: local note not found");
+        return { success: false, error: "Local note not found" };
+    }
+
+    const { data: supabaseNote, error: fetchError } = await supabaseClient
+        .from("notes")
+        .select("id, title, content, category, pinned, trashed, tags, background, created_at, updated_at")
+        .eq("id", SUPABASE_NOTE_ID)
+        .eq("user_id", user.id)
+        .single();
+
+    if (fetchError || !supabaseNote) {
+        console.error("Resolution failed: could not fetch Supabase note", fetchError);
+        return { success: false, error: fetchError?.message || "Supabase note not found" };
+    }
+
+    if (supabaseNote.trashed) {
+        console.error("Resolution failed: Supabase note is trashed, skipping");
+        return { success: false, error: "Supabase note is trashed" };
+    }
+
+    const updatePayload = {
+        title: localNote.title,
+        content: localNote.content,
+        category: localNote.category,
+        pinned: localNote.pinned,
+        trashed: localNote.trashed,
+        tags: localNote.tags || [],
+        background: localNote.background,
+        updated_at: localNote.updatedAt || new Date().toISOString()
+    };
+
+    console.log("Updating Supabase note with local authoritative data...");
+    console.log("Fields to update:", Object.keys(updatePayload));
+
+    const { data: updatedNote, error: updateError } = await supabaseClient
+        .from("notes")
+        .update(updatePayload)
+        .eq("id", SUPABASE_NOTE_ID)
+        .eq("user_id", user.id)
+        .select("id, title, content, category, pinned, trashed, tags, background, updated_at")
+        .single();
+
+    if (updateError || !updatedNote) {
+        console.error("Resolution failed: Supabase update failed", updateError);
+        return { success: false, error: updateError?.message || "Supabase update failed" };
+    }
+
+    localNote.supabase_id = SUPABASE_NOTE_ID;
+    saveNotes();
+
+    console.log("=== RESOLUTION COMPLETE ===");
+    console.log("Local note ID:", LOCAL_NOTE_ID);
+    console.log("Supabase note ID:", SUPABASE_NOTE_ID);
+    console.log("Updated fields:", Object.keys(updatePayload).join(", "));
+    console.log("Supabase updated_at:", updatedNote.updated_at);
+
+    return {
+        success: true,
+        localNoteId: LOCAL_NOTE_ID,
+        supabaseNoteId: SUPABASE_NOTE_ID,
+        updatedFields: Object.keys(updatePayload),
+        supabaseUpdatedAt: updatedNote.updated_at
+    };
+}
+
+window.resolveBackroomsLegacyMismatch = resolveBackroomsLegacyMismatch;
+
+
+// ================================
 // SAVE NOTES
 // ================================
 
