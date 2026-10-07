@@ -1001,6 +1001,136 @@ window.resolveBackroomsLegacyMismatch = resolveBackroomsLegacyMismatch;
 
 
 // ================================
+// PHASE 2B-2: SYNC PRIMITIVES
+// ================================
+
+function normalizeTimestamp(value) {
+    return value ? new Date(value).toISOString() : null;
+}
+
+async function getAuthenticatedUser() {
+    const { data: { user }, error } = await supabaseClient.auth.getUser();
+    if (error || !user) {
+        throw new Error("No authenticated session");
+    }
+    return user;
+}
+
+async function upsertNoteToSupabase(note) {
+    console.log("upsertNoteToSupabase: starting", { localId: note.id, hasSupabaseId: !!note.supabase_id });
+
+    try {
+        const user = await getAuthenticatedUser();
+
+        const payload = {
+            user_id: user.id,
+            title: note.title ?? "",
+            content: note.content ?? "",
+            category: note.category ?? "Important",
+            pinned: note.pinned ?? false,
+            trashed: note.trashed ?? false,
+            tags: note.tags ?? [],
+            background: note.background ?? "",
+            updated_at: normalizeTimestamp(note.updatedAt) || new Date().toISOString()
+        };
+
+        let result;
+        let operation;
+
+        if (note.supabase_id) {
+            console.log("upsertNoteToSupabase: updating existing", { supabaseId: note.supabase_id });
+            const { data, error } = await supabaseClient
+                .from("notes")
+                .update(payload)
+                .eq("id", note.supabase_id)
+                .eq("user_id", user.id)
+                .select("id")
+                .single();
+
+            if (error) throw error;
+            if (!data) throw new Error("Update returned no data");
+
+            result = data;
+            operation = "update";
+        } else {
+            console.log("upsertNoteToSupabase: inserting new");
+            const insertPayload = {
+                ...payload,
+                created_at: normalizeTimestamp(note.createdAt) || new Date().toISOString()
+            };
+            const { data, error } = await supabaseClient
+                .from("notes")
+                .insert(insertPayload)
+                .select("id")
+                .single();
+
+            if (error) throw error;
+            if (!data) throw new Error("Insert returned no data");
+
+            result = data;
+            operation = "insert";
+        }
+
+        console.log("upsertNoteToSupabase: success", { operation, supabaseId: result.id });
+
+        return {
+            success: true,
+            operation,
+            localNoteId: note.id,
+            supabaseNoteId: result.id,
+            error: null
+        };
+    } catch (err) {
+        console.error("upsertNoteToSupabase: failed", err);
+        return {
+            success: false,
+            operation: note.supabase_id ? "update" : "insert",
+            localNoteId: note.id,
+            supabaseNoteId: note.supabase_id ?? null,
+            error: err.message || String(err)
+        };
+    }
+}
+
+async function fetchSupabaseNotes() {
+    console.log("fetchSupabaseNotes: starting");
+
+    try {
+        const user = await getAuthenticatedUser();
+
+        const { data, error } = await supabaseClient
+            .from("notes")
+            .select("id, user_id, title, content, category, pinned, trashed, tags, background, created_at, updated_at")
+            .eq("user_id", user.id)
+            .order("updated_at", { ascending: false });
+
+        if (error) throw error;
+
+        const notes = data ?? [];
+        console.log("fetchSupabaseNotes: success", { count: notes.length });
+
+        return {
+            success: true,
+            notes,
+            count: notes.length,
+            error: null
+        };
+    } catch (err) {
+        console.error("fetchSupabaseNotes: failed", err);
+        return {
+            success: false,
+            notes: [],
+            count: 0,
+            error: err.message || String(err)
+        };
+    }
+}
+
+window.upsertNoteToSupabase = upsertNoteToSupabase;
+window.fetchSupabaseNotes = fetchSupabaseNotes;
+
+
+// ================================
 // SAVE NOTES
 // ================================
 
