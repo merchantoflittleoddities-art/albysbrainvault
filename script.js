@@ -645,6 +645,134 @@ window.associateLocalSupabaseNotes = associateLocalSupabaseNotes;
 
 
 // ================================
+// PHASE 2B-1 DIAGNOSTIC: Hash Mismatch Debug
+// ================================
+
+async function diagnoseHashMismatch() {
+    console.log("=== PHASE 2B-1 DIAGNOSTIC: Hash Mismatch Debug ===");
+
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !user) {
+        console.error("Diagnostic failed: not authenticated");
+        return;
+    }
+
+    const { data: supabaseNotes, error: fetchError } = await supabaseClient
+        .from("notes")
+        .select("id, title, content, category, pinned, trashed, tags, background, created_at, updated_at")
+        .eq("user_id", user.id);
+
+    if (fetchError) {
+        console.error("Diagnostic failed: could not fetch Supabase notes", fetchError);
+        return;
+    }
+
+    const activeLocalNotes = notes.filter(note => !note.trashed);
+
+    console.log(`\n--- LOCAL NOTES (${activeLocalNotes.length} active) ---`);
+    activeLocalNotes.forEach((note, i) => {
+        console.log(`\n[Local #${i + 1}] id: ${note.id}, title: "${note.title}"`);
+        console.log("  Fields:");
+        console.log("    title:", JSON.stringify(note.title));
+        console.log("    content:", JSON.stringify(note.content));
+        console.log("    category:", JSON.stringify(note.category));
+        console.log("    pinned:", note.pinned);
+        console.log("    trashed:", note.trashed);
+        console.log("    tags:", JSON.stringify(note.tags));
+        console.log("    background:", JSON.stringify(note.background));
+        console.log("    createdAt:", JSON.stringify(note.createdAt));
+        console.log("    updatedAt:", JSON.stringify(note.updatedAt));
+    });
+
+    console.log(`\n--- SUPABASE NOTES (${supabaseNotes.length}) ---`);
+    supabaseNotes.forEach((sn, i) => {
+        console.log(`\n[Supabase #${i + 1}] id: ${sn.id}, title: "${sn.title}"`);
+        console.log("  Fields:");
+        console.log("    title:", JSON.stringify(sn.title));
+        console.log("    content:", JSON.stringify(sn.content));
+        console.log("    category:", JSON.stringify(sn.category));
+        console.log("    pinned:", sn.pinned);
+        console.log("    trashed:", sn.trashed);
+        console.log("    tags:", JSON.stringify(sn.tags));
+        console.log("    background:", JSON.stringify(sn.background));
+        console.log("    created_at:", JSON.stringify(sn.created_at));
+        console.log("    updated_at:", JSON.stringify(sn.updated_at));
+    });
+
+    if (activeLocalNotes.length > 0 && supabaseNotes.length > 0) {
+        const localNote = activeLocalNotes[0];
+        const supabaseNote = supabaseNotes[0];
+
+        console.log("\n=== DETAILED COMPARISON: First Active Local vs First Supabase ===");
+
+        const fields = [
+            { local: "title", remote: "title", lVal: localNote.title, rVal: supabaseNote.title },
+            { local: "content", remote: "content", lVal: localNote.content, rVal: supabaseNote.content },
+            { local: "category", remote: "category", lVal: localNote.category, rVal: supabaseNote.category },
+            { local: "pinned", remote: "pinned", lVal: localNote.pinned, rVal: supabaseNote.pinned },
+            { local: "trashed", remote: "trashed", lVal: localNote.trashed, rVal: supabaseNote.trashed },
+            { local: "tags", remote: "tags", lVal: JSON.stringify([...(localNote.tags || [])].sort()), rVal: JSON.stringify([...(supabaseNote.tags || [])].sort()) },
+            { local: "background", remote: "background", lVal: localNote.background, rVal: supabaseNote.background },
+            { local: "createdAt", remote: "created_at", lVal: localNote.createdAt, rVal: supabaseNote.created_at },
+            { local: "updatedAt", remote: "updated_at", lVal: localNote.updatedAt, rVal: supabaseNote.updated_at },
+        ];
+
+        console.log("\nField-by-field match:");
+        fields.forEach(f => {
+            const match = f.lVal === f.rVal;
+            console.log(`  ${f.local} / ${f.remote}: ${match ? "✅ MATCH" : "❌ MISMATCH"}`);
+            if (!match) {
+                console.log(`    local:  ${JSON.stringify(f.lVal)}`);
+                console.log(`    remote: ${JSON.stringify(f.rVal)}`);
+            }
+        });
+
+        const localCanonical = {
+            title: localNote.title,
+            content: localNote.content,
+            category: localNote.category,
+            pinned: localNote.pinned,
+            trashed: localNote.trashed,
+            tags: [...(localNote.tags || [])].sort(),
+            background: localNote.background,
+            created_at: localNote.createdAt,
+            updated_at: localNote.updatedAt
+        };
+
+        const remoteCanonical = {
+            title: supabaseNote.title,
+            content: supabaseNote.content,
+            category: supabaseNote.category,
+            pinned: supabaseNote.pinned,
+            trashed: supabaseNote.trashed,
+            tags: [...(supabaseNote.tags || [])].sort(),
+            background: supabaseNote.background,
+            created_at: supabaseNote.created_at,
+            updated_at: supabaseNote.updated_at
+        };
+
+        console.log("\n--- Canonical JSON (local) ---");
+        console.log(JSON.stringify(localCanonical, null, 2));
+
+        console.log("\n--- Canonical JSON (supabase) ---");
+        console.log(JSON.stringify(remoteCanonical, null, 2));
+
+        const localHash = await computeSHA256(JSON.stringify(localCanonical));
+        const remoteHash = await computeSHA256(JSON.stringify(remoteCanonical));
+
+        console.log("\n--- Hashes ---");
+        console.log("  Local hash:  ", localHash);
+        console.log("  Remote hash: ", remoteHash);
+        console.log("  Match:       ", localHash === remoteHash ? "✅ YES" : "❌ NO");
+    }
+
+    console.log("\n=== DIAGNOSTIC COMPLETE ===");
+}
+
+window.diagnoseHashMismatch = diagnoseHashMismatch;
+
+
+// ================================
 // SAVE NOTES
 // ================================
 
