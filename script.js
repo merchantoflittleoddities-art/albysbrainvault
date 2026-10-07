@@ -569,13 +569,15 @@ async function associateLocalSupabaseNotes() {
     }
 
     const activeLocalNotes = notes.filter(note => !note.trashed);
-    if (activeLocalNotes.length !== 12) {
-        console.error(`Association failed: expected 12 active local notes, got ${activeLocalNotes.length}`);
-        return { success: false, error: `Expected 12 active local notes, got ${activeLocalNotes.length}` };
-    }
 
     const trashedLocalNotes = notes.filter(note => note.trashed);
     console.log(`Found ${trashedLocalNotes.length} trashed local notes (will remain untouched)`);
+
+    const alreadyAssociatedLocal = activeLocalNotes.filter(note => note.supabase_id);
+    const unassociatedLocalNotes = activeLocalNotes.filter(note => !note.supabase_id);
+
+    console.log(`Found ${alreadyAssociatedLocal.length} already-associated local note(s) (will be verified)`);
+    console.log(`Found ${unassociatedLocalNotes.length} unassociated active local note(s) to match`);
 
     const supabaseIdentities = new Map();
     for (const sn of supabaseNotes) {
@@ -590,7 +592,32 @@ async function associateLocalSupabaseNotes() {
     const matches = [];
     const unmatched = [];
 
-    for (const localNote of activeLocalNotes) {
+    for (const localNote of alreadyAssociatedLocal) {
+        const supabaseNote = supabaseNotes.find(sn => sn.id === localNote.supabase_id);
+        if (!supabaseNote) {
+            console.error(`Already-associated local note ${localNote.id} references missing Supabase ID ${localNote.supabase_id}`);
+            return { success: false, error: `Local note ${localNote.id} references missing Supabase row` };
+        }
+
+        const fieldsMatch =
+            localNote.title === supabaseNote.title &&
+            localNote.content === supabaseNote.content &&
+            localNote.category === supabaseNote.category &&
+            localNote.pinned === supabaseNote.pinned &&
+            localNote.trashed === supabaseNote.trashed &&
+            JSON.stringify([...(localNote.tags || [])].sort()) === JSON.stringify([...(supabaseNote.tags || [])].sort()) &&
+            localNote.background === supabaseNote.background &&
+            normalizeTimestamp(localNote.updatedAt) === normalizeTimestamp(supabaseNote.updated_at);
+
+        if (!fieldsMatch) {
+            console.error("Already-associated note field verification failed:", localNote.id);
+            return { success: false, error: `Already-associated note ${localNote.id} no longer matches Supabase` };
+        }
+
+        matches.push({ localNote, supabaseNote });
+    }
+
+    for (const localNote of unassociatedLocalNotes) {
         const localIdentity = computeLegacyNoteIdentity(localNote);
         const supabaseNote = supabaseIdentities.get(localIdentity);
 
@@ -618,26 +645,28 @@ async function associateLocalSupabaseNotes() {
         matches.push({ localNote, supabaseNote });
     }
 
-    if (unmatched.length > 0) {
-        console.error(`Association failed: ${unmatched.length} active local note(s) could not be matched`);
-        unmatched.forEach(n => console.error("  Unmatched local note:", n.id, n.title));
-        return { success: false, error: `${unmatched.length} note(s) unmatched`, unmatched };
+    const expectedNewMatches = supabaseNotes.length - alreadyAssociatedLocal.length;
+    if (matches.length !== supabaseNotes.length) {
+        console.error(`Association failed: expected ${supabaseNotes.length} total matches (${alreadyAssociatedLocal.length} verified + ${expectedNewMatches} new), got ${matches.length}`);
+        return { success: false, error: `Expected ${supabaseNotes.length} total matches, got ${matches.length}` };
     }
 
-    if (matches.length !== 12) {
-        console.error(`Association failed: expected 12 matches, got ${matches.length}`);
-        return { success: false, error: `Expected 12 matches, got ${matches.length}` };
+    if (matches.filter(m => !m.localNote.supabase_id).length !== expectedNewMatches) {
+        console.error(`Association failed: expected ${expectedNewMatches} new associations, got ${matches.filter(m => !m.localNote.supabase_id).length}`);
+        return { success: false, error: `Expected ${expectedNewMatches} new associations` };
     }
 
     for (const { localNote, supabaseNote } of matches) {
-        localNote.supabase_id = supabaseNote.id;
+        if (!localNote.supabase_id) {
+            localNote.supabase_id = supabaseNote.id;
+        }
     }
 
     saveNotes();
 
     console.log("Phase 2B-1: Association complete. Verification:");
-    console.log(`  - Active notes with supabase_id: ${notes.filter(n => !n.trashed && n.supabase_id).length}/12`);
-    console.log(`  - Active notes without supabase_id: ${notes.filter(n => !n.trashed && !n.supabase_id).length}`);
+    console.log(`  - Active notes with supabase_id: ${notes.filter(n => !n.trashed && n.supabase_id).length}/${supabaseNotes.length}`);
+    console.log(`  - Active notes without supabase_id (new notes): ${notes.filter(n => !n.trashed && !n.supabase_id).length}`);
     console.log(`  - Trashed notes (untouched): ${notes.filter(n => n.trashed).length}`);
     console.log(`  - Total local notes: ${notes.length}`);
 
@@ -647,7 +676,7 @@ async function associateLocalSupabaseNotes() {
         .eq("user_id", user.id);
     console.log(`  - Supabase rows: ${supabaseCount}`);
 
-    return { success: true, matches: matches.length };
+    return { success: true, matches: matches.length, newlyAssociated: expectedNewMatches, unmatchedNewNotes: unmatched.length };
 }
 
 window.associateLocalSupabaseNotes = associateLocalSupabaseNotes;
