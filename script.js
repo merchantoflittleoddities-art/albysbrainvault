@@ -782,6 +782,109 @@ window.diagnoseHashMismatch = diagnoseHashMismatch;
 
 
 // ================================
+// PHASE 2B-1 DIAGNOSTIC: Backrooms Note Mismatch
+// ================================
+
+async function diagnoseBackroomsMismatch() {
+    console.log("=== PHASE 2B-1 DIAGNOSTIC: Backrooms Note Mismatch ===");
+
+    const LOCAL_NOTE_ID = 1791326621767;
+    const SUPABASE_NOTE_ID = "bb23113a-51b5-421c-b62d-a237dff714f9";
+
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !user) {
+        console.error("Diagnostic failed: not authenticated");
+        return { success: false, error: "Not authenticated" };
+    }
+
+    const { data: supabaseNote, error: fetchError } = await supabaseClient
+        .from("notes")
+        .select("id, title, content, category, pinned, trashed, tags, background, created_at, updated_at")
+        .eq("id", SUPABASE_NOTE_ID)
+        .eq("user_id", user.id)
+        .single();
+
+    if (fetchError || !supabaseNote) {
+        console.error("Diagnostic failed: could not fetch Supabase note", fetchError);
+        return { success: false, error: fetchError?.message || "Supabase note not found" };
+    }
+
+    const localNote = notes.find(note => note.id === LOCAL_NOTE_ID);
+    if (!localNote) {
+        console.error("Diagnostic failed: local note not found");
+        return { success: false, error: "Local note not found" };
+    }
+
+    console.log("\n--- LOCAL NOTE ---");
+    console.log("id:", localNote.id);
+    console.log("title:", JSON.stringify(localNote.title));
+    console.log("content length:", localNote.content?.length ?? 0);
+    console.log("category:", JSON.stringify(localNote.category));
+    console.log("pinned:", localNote.pinned);
+    console.log("trashed:", localNote.trashed);
+    console.log("tags:", JSON.stringify(localNote.tags));
+    console.log("background:", JSON.stringify(localNote.background));
+    console.log("updatedAt:", JSON.stringify(localNote.updatedAt));
+
+    console.log("\n--- SUPABASE NOTE ---");
+    console.log("id:", supabaseNote.id);
+    console.log("title:", JSON.stringify(supabaseNote.title));
+    console.log("content length:", supabaseNote.content?.length ?? 0);
+    console.log("category:", JSON.stringify(supabaseNote.category));
+    console.log("pinned:", supabaseNote.pinned);
+    console.log("trashed:", supabaseNote.trashed);
+    console.log("tags:", JSON.stringify(supabaseNote.tags));
+    console.log("background:", JSON.stringify(supabaseNote.background));
+    console.log("updated_at:", JSON.stringify(supabaseNote.updated_at));
+
+    const localUpdated = normalizeTimestamp(localNote.updatedAt);
+    const remoteUpdated = normalizeTimestamp(supabaseNote.updated_at);
+
+    const fields = [
+        { name: "title", local: localNote.title, remote: supabaseNote.title },
+        { name: "content", local: localNote.content, remote: supabaseNote.content },
+        { name: "category", local: localNote.category, remote: supabaseNote.category },
+        { name: "pinned", local: localNote.pinned, remote: supabaseNote.pinned },
+        { name: "trashed", local: localNote.trashed, remote: supabaseNote.trashed },
+        { name: "tags", local: [...(localNote.tags || [])].sort(), remote: [...(supabaseNote.tags || [])].sort() },
+        { name: "background", local: localNote.background, remote: supabaseNote.background },
+        { name: "updatedAt/updated_at", local: localUpdated, remote: remoteUpdated },
+    ];
+
+    const results = [];
+    console.log("\n=== FIELD-BY-FIELD COMPARISON ===");
+    fields.forEach(f => {
+        const match = JSON.stringify(f.local) === JSON.stringify(f.remote);
+        const status = match ? "✅ MATCH" : "❌ MISMATCH";
+        console.log(`  ${f.name}: ${status}`);
+        console.log(`    local:  ${JSON.stringify(f.local)}`);
+        console.log(`    remote: ${JSON.stringify(f.remote)}`);
+        results.push({ field: f.name, local: f.local, remote: f.remote, match });
+    });
+
+    const result = {
+        success: true,
+        localNoteId: LOCAL_NOTE_ID,
+        supabaseNoteId: SUPABASE_NOTE_ID,
+        localContentLength: localNote.content?.length ?? 0,
+        supabaseContentLength: supabaseNote.content?.length ?? 0,
+        fields: results,
+        allMatch: results.every(r => r.match)
+    };
+
+    console.log("\n=== SUMMARY ===");
+    console.log("Local content length:", result.localContentLength);
+    console.log("Supabase content length:", result.supabaseContentLength);
+    console.log("All fields match:", result.allMatch ? "✅ YES" : "❌ NO");
+
+    console.log("\n=== DIAGNOSTIC COMPLETE ===");
+    return result;
+}
+
+window.diagnoseBackroomsMismatch = diagnoseBackroomsMismatch;
+
+
+// ================================
 // SAVE NOTES
 // ================================
 
