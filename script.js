@@ -504,7 +504,11 @@ notes.forEach(note => {
 // PHASE 2B-1: LOCAL ↔ SUPABASE ASSOCIATION
 // ================================
 
-function computeNoteHash(note) {
+function normalizeTimestamp(value) {
+    return value ? new Date(value).toISOString() : null;
+}
+
+function computeLegacyNoteIdentity(note) {
     const canonical = {
         title: note.title,
         content: note.content,
@@ -513,8 +517,21 @@ function computeNoteHash(note) {
         trashed: note.trashed,
         tags: [...(note.tags || [])].sort(),
         background: note.background,
-        created_at: note.createdAt,
-        updated_at: note.updatedAt
+        updated_at: normalizeTimestamp(note.updatedAt)
+    };
+    return JSON.stringify(canonical);
+}
+
+function computeSupabaseNoteIdentity(sn) {
+    const canonical = {
+        title: sn.title,
+        content: sn.content,
+        category: sn.category,
+        pinned: sn.pinned,
+        trashed: sn.trashed,
+        tags: [...(sn.tags || [])].sort(),
+        background: sn.background,
+        updated_at: normalizeTimestamp(sn.updated_at)
     };
     return JSON.stringify(canonical);
 }
@@ -528,7 +545,7 @@ async function computeSHA256(str) {
 }
 
 async function associateLocalSupabaseNotes() {
-    console.log("Phase 2B-1: Starting local ↔ Supabase association...");
+    console.log("Phase 2B-1: Starting local ↔ Supabase association (legacy matching)...");
 
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
@@ -560,29 +577,22 @@ async function associateLocalSupabaseNotes() {
     const trashedLocalNotes = notes.filter(note => note.trashed);
     console.log(`Found ${trashedLocalNotes.length} trashed local notes (will remain untouched)`);
 
-    const supabaseHashes = new Map();
+    const supabaseIdentities = new Map();
     for (const sn of supabaseNotes) {
-        const canonical = {
-            title: sn.title,
-            content: sn.content,
-            category: sn.category,
-            pinned: sn.pinned,
-            trashed: sn.trashed,
-            tags: [...(sn.tags || [])].sort(),
-            background: sn.background,
-            created_at: sn.created_at,
-            updated_at: sn.updated_at
-        };
-        const hash = await computeSHA256(JSON.stringify(canonical));
-        supabaseHashes.set(hash, sn);
+        const identity = computeSupabaseNoteIdentity(sn);
+        if (supabaseIdentities.has(identity)) {
+            console.error("Duplicate Supabase identity detected, failing safely:", identity);
+            return { success: false, error: "Ambiguous match: duplicate Supabase note identities" };
+        }
+        supabaseIdentities.set(identity, sn);
     }
 
     const matches = [];
     const unmatched = [];
 
     for (const localNote of activeLocalNotes) {
-        const localHash = await computeSHA256(computeNoteHash(localNote));
-        const supabaseNote = supabaseHashes.get(localHash);
+        const localIdentity = computeLegacyNoteIdentity(localNote);
+        const supabaseNote = supabaseIdentities.get(localIdentity);
 
         if (!supabaseNote) {
             unmatched.push(localNote);
@@ -597,11 +607,10 @@ async function associateLocalSupabaseNotes() {
             localNote.trashed === supabaseNote.trashed &&
             JSON.stringify([...(localNote.tags || [])].sort()) === JSON.stringify([...(supabaseNote.tags || [])].sort()) &&
             localNote.background === supabaseNote.background &&
-            localNote.createdAt === supabaseNote.created_at &&
-            localNote.updatedAt === supabaseNote.updated_at;
+            normalizeTimestamp(localNote.updatedAt) === normalizeTimestamp(supabaseNote.updated_at);
 
         if (!fieldsMatch) {
-            console.error("Hash matched but field verification failed for note:", localNote.id);
+            console.error("Identity matched but field verification failed for note:", localNote.id);
             unmatched.push(localNote);
             continue;
         }
@@ -1145,6 +1154,8 @@ function createNewNote() {
         trashed: false,
 
         tags: [],
+
+        createdAt: new Date().toISOString(),
 
         updatedAt: new Date().toISOString(),
 
