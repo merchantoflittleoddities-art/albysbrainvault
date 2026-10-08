@@ -1131,6 +1131,70 @@ window.fetchSupabaseNotes = fetchSupabaseNotes;
 
 
 // ================================
+// PHASE 2B-2 TEST CLEANUP
+// ================================
+
+async function cleanupPhase2B2InsertTest() {
+    console.log("cleanupPhase2B2InsertTest: starting");
+
+    const TEST_NOTE_ID = "4b54615e-6d44-4fe1-88bf-e78639aaf491";
+
+    try {
+        const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+        if (userError || !user) {
+            console.error("cleanupPhase2B2InsertTest: failed - no authenticated session");
+            return {
+                success: false,
+                deletedSupabaseNoteId: null,
+                error: "No authenticated session"
+            };
+        }
+
+        const { data, error } = await supabaseClient
+            .from("notes")
+            .delete()
+            .eq("id", TEST_NOTE_ID)
+            .eq("user_id", user.id)
+            .select("id");
+
+        if (error) {
+            console.error("cleanupPhase2B2InsertTest: delete failed", error);
+            return {
+                success: false,
+                deletedSupabaseNoteId: null,
+                error: error.message
+            };
+        }
+
+        if (!data || data.length === 0) {
+            console.log("cleanupPhase2B2InsertTest: no row found with ID", TEST_NOTE_ID);
+            return {
+                success: true,
+                deletedSupabaseNoteId: null,
+                error: "Row not found (already deleted or never existed)"
+            };
+        }
+
+        console.log("cleanupPhase2B2InsertTest: success", { deletedId: data[0].id });
+        return {
+            success: true,
+            deletedSupabaseNoteId: data[0].id,
+            error: null
+        };
+    } catch (err) {
+        console.error("cleanupPhase2B2InsertTest: unexpected error", err);
+        return {
+            success: false,
+            deletedSupabaseNoteId: null,
+            error: err.message || String(err)
+        };
+    }
+}
+
+window.cleanupPhase2B2InsertTest = cleanupPhase2B2InsertTest;
+
+
+// ================================
 // SAVE NOTES
 // ================================
 
