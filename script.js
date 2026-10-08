@@ -139,7 +139,6 @@ async function initializeAuth() {
 // Initialize the main app (notes, UI, event listeners)
 async function initializeApp() {
     console.log("Initializing app...");
-    displayNotes();
     setupSidebarButtonHandlers();
 
     // Open first active note on desktop only
@@ -165,6 +164,11 @@ async function initializeApp() {
 
     // Phase 1: Supabase read test - verify we can read user's notes
     await testSupabaseRead();
+
+    // Phase 2C-1: Perform initial two-way sync
+    console.log("Phase 2C-1: Running initial sync...");
+    await syncNotes();
+    displayNotes();
 }
 
 async function testSupabaseRead() {
@@ -1131,6 +1135,162 @@ window.fetchSupabaseNotes = fetchSupabaseNotes;
 
 
 // ================================
+// // ================================
+// // ================================
+// PHASE 2C-1: BASIC TWO-WAY SYNC
+// ================================
+
+let isSyncing = false;
+
+async function syncNotes() {
+    if (isSyncing) {
+        console.log("syncNotes: already syncing, skipping");
+        return { success: false, skipped: true, error: "Sync already in progress" };
+    }
+
+    isSyncing = true;
+    console.log("syncNotes: starting");
+
+    const result = {
+        success: true,
+        pulled: 0,
+        pushed: 0,
+        createdLocally: 0,
+        createdRemotely: 0,
+        unchanged: 0,
+        errors: []
+    };
+
+    try {
+        const user = await getAuthenticatedUser();
+
+        const localNotes = notes;
+        const supabaseResult = await fetchSupabaseNotes();
+
+        if (!supabaseResult.success) {
+            throw new Error("Failed to fetch Supabase notes: " + supabaseResult.error);
+        }
+
+        const supabaseNotes = supabaseResult.notes;
+        const supabaseNotesById = new Map(supabaseNotes.map(sn => [sn.id, sn]));
+
+        // 1. For cloud notes that already have a matching local note (by supabase_id)
+        for (const localNote of localNotes) {
+            if (!localNote.supabase_id) continue;
+
+            const supabaseNote = supabaseNotesById.get(localNote.supabase_id);
+            if (!supabaseNote) {
+                console.warn("syncNotes: local note " + localNote.id + " references missing Supabase ID " + localNote.supabase_id);
+                result.errors.push("Local note " + localNote.id + " references missing Supabase row");
+                continue;
+            }
+
+            const localUpdated = normalizeTimestamp(localNote.updatedAt);
+            const remoteUpdated = normalizeTimestamp(supabaseNote.updated_at);
+
+            if (remoteUpdated > localUpdated) {
+                // Supabase is newer - pull to local
+                updateLocalNoteFromSupabase(localNote, supabaseNote);
+                result.pulled++;
+                console.log("syncNotes: pulled newer version for local " + localNote.id + " (supabase " + supabaseNote.id + ")");
+            } else if (localUpdated > remoteUpdated) {
+                // Local is newer - push to Supabase
+                const pushResult = await upsertNoteToSupabase(localNote);
+                if (pushResult.success) {
+                    result.pushed++;
+                    console.log("syncNotes: pushed newer version for local " + localNote.id + " (supabase " + supabaseNote.id + ")");
+                } else {
+                    result.errors.push("Failed to push local note " + localNote.id + ": " + pushResult.error);
+                }
+            } else {
+                result.unchanged++;
+            }
+        }
+
+        // Save after step 1 mutations (pulled updates)
+        if (result.pulled > 0 || result.pushed > 0) {
+            saveNotes();
+        }
+
+        // 2. For cloud notes that have no matching local note - create locally
+        for (const supabaseNote of supabaseNotes) {
+            const hasLocalMatch = localNotes.some(ln => ln.supabase_id === supabaseNote.id);
+            if (!hasLocalMatch) {
+                createLocalNoteFromSupabase(supabaseNote);
+                result.createdLocally++;
+                console.log("syncNotes: created local note from Supabase " + supabaseNote.id);
+            }
+        }
+
+        // Save after step 2 mutations (created locally)
+        if (result.createdLocally > 0) {
+            saveNotes();
+        }
+
+        // 3. For local active notes with supabase_id === null - push to Supabase
+        const activeLocalNotes = localNotes.filter(note => !note.trashed);
+        for (const localNote of activeLocalNotes) {
+            if (localNote.supabase_id === null || localNote.supabase_id === undefined) {
+                const pushResult = await upsertNoteToSupabase(localNote);
+                if (pushResult.success) {
+                    localNote.supabase_id = pushResult.supabaseNoteId;
+                    result.createdRemotely++;
+                    console.log("syncNotes: pushed new local note " + localNote.id + " to Supabase as " + pushResult.supabaseNoteId);
+                    // Save immediately after each successful supabase_id assignment
+                    saveNotes();
+                } else {
+                    result.errors.push("Failed to push new local note " + localNote.id + ": " + pushResult.error);
+                }
+            }
+        }
+
+        // Final save to catch any remaining changes
+        saveNotes();
+
+        console.log("syncNotes: complete", result);
+        return result;
+
+    } catch (err) {
+        console.error("syncNotes: failed", err);
+        result.success = false;
+        result.errors.push(err.message || String(err));
+        return result;
+    } finally {
+        isSyncing = false;
+    }
+}function updateLocalNoteFromSupabase(localNote, supabaseNote) {
+    localNote.title = supabaseNote.title;
+    localNote.content = supabaseNote.content;
+    localNote.category = supabaseNote.category;
+    localNote.pinned = supabaseNote.pinned;
+    localNote.trashed = supabaseNote.trashed;
+    localNote.tags = supabaseNote.tags || [];
+    localNote.background = supabaseNote.background;
+    localNote.createdAt = supabaseNote.created_at;
+    localNote.updatedAt = supabaseNote.updated_at;
+}
+
+function createLocalNoteFromSupabase(supabaseNote) {
+    const newLocalNote = {
+        id: Date.now() + Math.random(),
+        supabase_id: supabaseNote.id,
+        title: supabaseNote.title,
+        content: supabaseNote.content,
+        category: supabaseNote.category,
+        pinned: supabaseNote.pinned,
+        trashed: supabaseNote.trashed,
+        tags: supabaseNote.tags || [],
+        background: supabaseNote.background,
+        createdAt: supabaseNote.created_at,
+        updatedAt: supabaseNote.updated_at
+    };
+    notes.push(newLocalNote);
+}
+
+window.syncNotes = syncNotes;
+
+
+// ================================
 // PHASE 2B-2 TEST CLEANUP
 // ================================
 
@@ -1286,6 +1446,10 @@ function addTag(note, tagText) {
     saveNotes();
     renderTags(note);
     displayNotes();
+    // Phase 2C-1: Sync to Supabase after local change
+    if (note.supabase_id !== null && note.supabase_id !== undefined) {
+        syncNotes();
+    }
     return true;
 }
 
@@ -1295,6 +1459,10 @@ function removeTag(note, tagToRemove) {
     saveNotes();
     renderTags(note);
     displayNotes();
+    // Phase 2C-1: Sync to Supabase after local change
+    if (note.supabase_id !== null && note.supabase_id !== undefined) {
+        syncNotes();
+    }
 }
 
 // Tag input handler
@@ -1595,14 +1763,11 @@ function createNewNote() {
 
     openNote(newNote.id);
 
-}
-
-
-// ================================
-// DISPLAY NOTES
-// ================================
-
-function displayNotes() {
+    // Phase 2C-1: Sync to Supabase for new note (non-blocking)
+    syncNotes().catch(err => {
+        console.error("createNewNote: initial sync failed, note created locally:", err);
+    });
+}function displayNotes() {
 
     notesList.innerHTML = "";
 
@@ -2046,6 +2211,10 @@ function saveCurrentNote() {
         note
     );
 
+    // Phase 2C-1: Sync to Supabase after local change
+    if (note.supabase_id !== null && note.supabase_id !== undefined) {
+        syncNotes();
+    }
 }
 
 
@@ -2097,6 +2266,10 @@ function changeCategory() {
         note
     );
 
+    // Phase 2C-1: Sync to Supabase after local change
+    if (note.supabase_id !== null && note.supabase_id !== undefined) {
+        syncNotes();
+    }
 }
 
 
@@ -2134,6 +2307,7 @@ function togglePin() {
     note.pinned =
         !note.pinned;
 
+    note.updatedAt = new Date().toISOString();
 
     saveNotes();
 
@@ -2160,6 +2334,11 @@ function togglePin() {
         "Pin status changed:",
         note
     );
+
+    // Phase 2C-1: Sync to Supabase after local change
+    if (note.supabase_id !== null && note.supabase_id !== undefined) {
+        syncNotes();
+    }
 
 }
 
@@ -2206,9 +2385,15 @@ function handleDeleteButton() {
         note.trashed =
             false;
 
+    note.updatedAt = new Date().toISOString();
 
-        saveNotes();
+    saveNotes();
 
+
+        // Phase 2C-1: Sync to Supabase after local change (restore)
+        if (note.supabase_id !== null && note.supabase_id !== undefined) {
+            syncNotes();
+        }
 
         currentNoteId =
             null;
@@ -2254,9 +2439,15 @@ displayNotes();
     note.trashed =
         true;
 
+    note.updatedAt = new Date().toISOString();
 
     saveNotes();
 
+
+    // Phase 2C-1: Sync to Supabase after local change (trash)
+    if (note.supabase_id !== null && note.supabase_id !== undefined) {
+        syncNotes();
+    }
 
     currentNoteId =
         null;
@@ -2573,3 +2764,33 @@ document.addEventListener("click", (e) => {
         sortDropdown.classList.add("hidden");
     }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
